@@ -1697,10 +1697,10 @@ sub finish_change_details {
       return;
     }
 
-    my $hash = generate_hash($new_password,get_salt());
+    my $new_hash = generate_hash($new_password,get_salt());
 
     # We can now change the password
-    $dbh->do("UPDATE person SET password=? WHERE id=?",undef,($hash,$session->param("person_id"))) or do {
+    $dbh->do("UPDATE person SET password=? WHERE id=?",undef,($new_hash,$session->param("person_id"))) or do {
       print_bug("Can't update password: ".$dbh->errstr());
       return;
     };
