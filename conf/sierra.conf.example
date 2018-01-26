@@ -105,55 +105,10 @@ PUBLIC_QUEUE 0
 ##              ##
 ##################
 #
-# There are 3 types of data folder which you can specify in Sierra.
-# You can choose for yourself which of the 3 classes best fits 
-# your structure and you don't have to have entries in all of these
-# classes.  You can have multiple folders in each type.
-#
-# The types are:
-#
-# 1) Working folder
-#
-# Working folders are normally used to denote temporary staging 
-# areas for data which is not fully processed.  Data from these
-# folders will appear in Sierra, but will not be used as part of
-# the backup routine.
-#
-# 2) Primary folder
-#
-# This is the primary location for processed data.  These folders
-# will be included in the set of locations to be backed up with
-# the backup script.
-#
-# 3) Backup folder
-#
-# These folders will hold secondary copies of data in the primary
-# folders. When running backups it will be assumed that the 
-# backup location should be the first listed backup folder so the
-# order of these folders is important.
-#
-# When presenting data in Sierra the various folders will be
-# searched for a match to a particular run.  The order of this
-# searching will be:
-#
-# 1st Primary folder
-# 2nd Working folder
-# 3rd Backup folder
-#
-# Within each group the search order will be the order in which the
-# folders are listed.
+# The folders listed here hold the run folders with the actual sequence data
+# in it
 
-## WORKING_FOLDER
-WORKING_FOLDER 	/data/working_folder1
-WORKING_FOLDER 	/data/working_folder2
-
-## PRIMARY_FOLDER
-PRIMARY_FOLDER /data/primary_folder1
-PRIMARY_FOLDER /data/primary_folder2
-
-## BACKUP_FOLDER
-BACKUP_FOLDER /data/backup_folder_used
-BACKUP_FOLDER /data/backup_folder_2
+DATA_FOLDER /data
 
 ## BUDGET_DB_SERVER
 # The hostname of the machine which hosts the optional budget
