@@ -1,0 +1,196 @@
+body {    
+  font-family: sans-serif;   
+  color: #000000;   
+  background-color: #FFFFFF; 
+  margin: 0;
+  padding: 0;
+}
+
+h1 { 
+  color: #FFFFFF;
+  background-color: #326B30;
+}
+h2,h3,h4 { 
+  text-align: left;
+}
+
+h2 { 
+  color: #00506E;
+}
+
+a { 
+  color: #00506E;
+ }
+
+p { 
+  text-align: justify;
+  line-height: 120%;
+}
+
+table { 
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+th { 
+  text-align: center;
+  background-color: #326B30;
+  color: #FFFFFF;
+  padding: 0.4em;
+  font-size: 80%;
+}
+
+td { 
+  text-align: left;
+  background-color: #DDDDDD;
+  color: #444444;
+  padding: 0.2em;
+  font-size: 80%;
+}
+
+td.center { 
+  text-align: center;
+}
+
+
+td input[type="text"]  { 
+  width: 95%;
+}
+
+
+
+#menu {
+  float: left;
+  width: 150px;
+  margin-left: -1px;
+  padding: 10px;
+  line-height: 150%;
+
+}
+
+#header { 
+  border: 0;
+  margin: 0;
+  padding: 0;
+  padding-top: 3px;
+  background-color: #326B30;
+  background-image: url('../images/sierra_gradient.png');
+  background-position: right top;
+  text-align:left;
+  color: white;
+  font-size:80%;
+
+}
+
+
+#menu ul { 
+  margin:0;
+  padding: 0;
+  border: 0;
+}
+
+#menu li { 
+  text-align:left;
+  list-style-type: none;
+  font-weight: bold;
+}
+
+#menu li a { 
+  text-decoration: none;
+  display: block;
+  padding: 0.2em;
+  color: #00506E;
+}
+
+#menu li a.admin { 
+  color: #CC0000;
+}
+
+#menu li a:hover { 
+  text-decoration: none;
+  background-color: #00506E;
+  color: white;
+}
+
+#menu li a.admin:hover { 
+  background-color: #CC0000;
+}
+
+
+#main {
+  padding: 0px;
+  margin-left: 180px;
+  border-left: 1px;
+  margin-right: 10px;
+  margin-bottom: 10px; 
+}
+
+#infobar { 
+  margin-left: auto;
+  margin-right: auto;
+  background-color: #326B30;
+  width: 98%;
+  font-size: 90%;
+  text-align: left;
+  padding-top :0.4em;
+  padding-bottom :0.4em;
+  padding-left :2%;
+  color: white;
+}
+
+
+#footer {
+  border-top: 1px;
+  padding-top: 3px;
+  padding-bottom: 3px;
+  background-color: #326B30;
+  clear: both;
+}
+
+#footer p {
+  color: white;
+  font-size: 85%;
+  border: 0;
+  margin: 0;
+  padding: 0.2em;
+  padding-left: 2em;
+}
+
+#footer a { 
+  color: white;
+}
+
+.center { 
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+ }
+
+p.warning { 
+
+  color: red;
+  font-size: 120%;
+  text-align: center;
+ }
+
+div.note { 
+  background-color: #DDDDDD;
+  padding: 0.5em;
+  margin-top: 0.5em;
+}
+
+div.note h4 { 
+  margin: 0;
+}
+div.note p { 
+  margin: 0;
+  margin-top: 0.5em;
+}
+
+textarea {
+  padding: 0;
+  margin: 0;
+  width: 97%;
+  overflow: auto;
+}

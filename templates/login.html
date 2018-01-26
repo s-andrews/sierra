@@ -1,0 +1,31 @@
+<!-- TMPL_INCLUDE NAME="header.html" -->
+<!-- TMPL_INCLUDE NAME="login_menu.html" -->
+
+    <div id="main">
+
+      <h2 class="center">Please Log In</h2>
+
+  <form action="sierra.pl" method="POST">
+
+    <input type="hidden" name="action" value="process_login">
+
+      <table>
+	<tr>
+	  <th>Email</th>
+	  <td><input type="text" name="email" size="30"></td>
+	</tr>
+	<tr>
+	  <th>Password</th>
+	  <td><input type="password" name="password" size="30"></td>
+	</tr>
+      </table>  
+      <p class="center">
+	  <input type="submit" value="Log in">
+      </p>
+
+  </form>
+
+    </div>
+
+
+<!-- TMPL_INCLUDE NAME="footer.html" -->

@@ -1,0 +1,88 @@
+<!-- TMPL_INCLUDE NAME="header.html" -->
+<!-- TMPL_INCLUDE NAME="toolbar.html" -->
+<!-- TMPL_INCLUDE NAME="user_menu.html" -->
+
+    <div id="main">
+  <h2 id="reports">Reports</h2>
+
+  <form action="sierra.pl" method="GET">
+    <input type="hidden" name="action" value="reports">
+    
+  <table>
+    <tr>
+      <th>Report</th>
+      <td>
+	<select name="report_type">
+	  <!-- TMPL_LOOP NAME=REPORT_TYPES -->
+	  <option <!-- TMPL_IF NAME=SELECTED -->selected<!-- /TMPL_IF -->><!-- TMPL_VAR NAME=TYPE ESCAPE=HTML --></option>
+	  <!-- /TMPL_LOOP -->
+	</select>
+      </td>
+      <th>From</th>
+      <td>
+	<select name="from_month">
+	  <!-- TMPL_LOOP NAME=FROM_MONTHS -->
+	  <option value="<!-- TMPL_VAR NAME=NUMBER ESCAPE=HTML -->" <!-- TMPL_IF NAME=SELECTED -->selected<!-- /TMPL_IF -->><!-- TMPL_VAR NAME=NAME ESCAPE=HTML --></option>
+	  <!-- /TMPL_LOOP -->
+	</select>
+      </td>
+      <td>
+	<select name="from_year">
+	  <!-- TMPL_LOOP NAME=FROM_YEARS -->
+	  <option <!-- TMPL_IF NAME=SELECTED -->selected<!-- /TMPL_IF -->><!-- TMPL_VAR NAME=YEAR ESCAPE=HTML --></option>
+	  <!-- /TMPL_LOOP -->
+	</select>
+      </td>
+      <th>To</th>
+      <td>
+	<select name="to_month">
+	  <!-- TMPL_LOOP NAME=TO_MONTHS -->
+	  <option value="<!-- TMPL_VAR NAME=NUMBER ESCAPE=HTML -->" <!-- TMPL_IF NAME=SELECTED -->selected<!-- /TMPL_IF -->><!-- TMPL_VAR NAME=NAME ESCAPE=HTML --></option>
+	  <!-- /TMPL_LOOP -->
+	</select>
+      </td>
+      <td>
+	<select name="to_year">
+	  <!-- TMPL_LOOP NAME=TO_YEARS -->
+	  <option <!-- TMPL_IF NAME=SELECTED -->selected<!-- /TMPL_IF -->><!-- TMPL_VAR NAME=YEAR ESCAPE=HTML --></option>
+	  <!-- /TMPL_LOOP -->
+	</select>
+      </td>
+      <th>
+	<input type="submit" value="Create Report">
+      </th>
+    </tr>
+  </table>
+
+  </form>
+
+  <!-- TMPL_IF NAME=HEADERS -->
+
+  <h2><!-- TMPL_VAR NAME=REPORT_TYPE ESCAPE=HTML --></h2>
+
+  <table>
+    <tr>
+      <!-- TMPL_LOOP NAME=HEADERS -->
+      <th><!-- TMPL_VAR NAME=NAME ESCAPE=HTML --></th>
+      <!-- /TMPL_LOOP -->
+    </tr>
+
+    <!-- TMPL_LOOP NAME=ROWS -->
+    <tr>
+      <!-- TMPL_LOOP NAME=ROW -->
+      <td><!-- TMPL_VAR NAME=VALUE ESCAPE=HTML --></td>
+      <!-- /TMPL_LOOP -->
+    </tr>
+    <!-- /TMPL_LOOP -->
+
+  </table>
+
+  <!-- /TMPL_IF -->
+
+ 
+
+    </div>
+
+
+
+<!-- TMPL_INCLUDE NAME="footer.html" -->

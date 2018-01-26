@@ -1,0 +1,282 @@
+#!/usr/bin/perl
+
+##########################################################################
+#                                                                        #
+# Copyright 2011, Simon Andrews (simon.andrews@babraham.ac.uk)           #
+#                                                                        #
+# This file is part of Sierra.                                           #
+#                                                                        #
+# Sierra is free software: you can redistribute it and/or modify         #
+# it under the terms of the GNU General Public License as published by   #
+# the Free Software Foundation, either version 3 of the License, or      #
+# (at your option) any later version.                                    #
+#                                                                        #
+# Sierra is distributed in the hope that it will be useful,              #
+# but WITHOUT ANY WARRANTY; without even the implied warranty of         #
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          #
+# GNU General Public License for more details.                           #
+#                                                                        #
+# You should have received a copy of the GNU General Public License      #
+# along with Sierra.  If not, see <http://www.gnu.org/licenses/>.        #
+##########################################################################
+
+use warnings;
+use strict;
+use DBI;
+use FindBin qw($Bin);
+use lib "$Bin/../source";
+use Sierra::Constants;
+use Sierra::IlluminaRun;
+use Getopt::Long;
+use File::Copy;
+
+my $BACKUP_VERSION = "0.4";
+
+# Collect the options the user has supplied.
+
+my $method;
+my $quiet;
+my $force;
+my $help;
+my $version;
+my $delete_unmatched;
+
+
+my $result = GetOptions("method=s" => \$method,
+			"force"    => \$force,
+			"quiet"    => \$quiet,
+			"help"     => \$help,
+			"version"  => \$version,
+			"delete_unmatched" => \$delete_unmatched,
+		       );
+die "Failed to process options" unless ($result);
+
+if ($help) {
+  print while (<DATA>);
+  exit;
+}
+
+if ($version) {
+  print "backup_sierra_data version $BACKUP_VERSION from Sierra $Sierra::Constants::SIERRA_VERSION\n";
+  exit;
+}
+
+# Check the method we're going to use
+unless ($method) {
+  $method = "copy";
+}
+
+unless ($method eq 'copy' or $method eq 'link' or $method eq 'hard' or $method eq 'mock') {
+  die "Backup method must be one of 'copy', 'link', 'hard' or 'mock', not '$method'\n";
+}
+
+my $outfolder = shift @ARGV;
+
+unless ($outfolder) {
+  die "No output folder was specified\n";
+}
+
+if (-e $outfolder and (! -d $outfolder)) {
+  die "Your output folder exists, but isn't a folder\n";
+}
+
+unless (-e $outfolder) {
+  mkdir $outfolder or die "Failed to create output folder '$outfolder': $!\n";
+}
+
+chdir ($outfolder) or die "Failed to move to '$outfolder': $!";
+
+# Now we can start going through the runs to back up.
+
+# We can now try to connect to the database
+my $dbh = DBI->connect("DBI:mysql:database=$Sierra::Constants::DB_NAME;host=$Sierra::Constants::DB_SERVER",$Sierra::Constants::DB_USERNAME,$Sierra::Constants::DB_PASSWORD,{RaiseError=>0,AutoCommit=>1});
+
+unless ($dbh) {
+  die ("Couldn't connect to Sierra database: ".$DBI::errstr);
+}
+
+# Go through the full list of runs and process them all
+
+my $all_runs_sth = $dbh->prepare("SELECT run_folder_name FROM run order by id DESC");
+
+$all_runs_sth->execute() or die "Failed to get list of runs: ".$dbh->errstr()."\n";
+
+while (my ($folder) = $all_runs_sth->fetchrow_array()) {
+
+  unless ($quiet) {
+    warn "Backing up $folder\n";
+  }
+
+  backup_folder($folder);
+
+}
+
+
+sub backup_folder {
+
+  my ($folder) = @_;
+
+  my %existing_files;
+
+  if ($delete_unmatched && -e $folder) {
+    # We're going to collect a list of all of the files which are
+    # currently in the run folder on the backup and will compare
+    # our real list to these.  Anything extra in the backup will
+    # be listed for deletion so we can go in later and clean up
+
+
+    open (FIND,"find $folder -print |") or die "Can't open pipe to find $!";
+
+    while (<FIND>) {
+      chomp;
+      if (-f $_) {
+#	warn "Found existing file $_\n";
+	$existing_files{$_} = 0;
+      }
+    }
+
+    close FIND;
+  }
+
+  my $run_obj = Sierra::IlluminaRun->new($folder);
+
+  die "Couldn't make run object from '$folder'\n" unless ($run_obj);
+
+  my @results_folders = $run_obj->get_results_folders();
+
+  foreach my $results_folder (@results_folders) {
+
+    # TODO: Get the lane count from the database
+    for my $lane_number (1..8) {
+
+      my $lane = $run_obj -> get_lane($lane_number);
+      my @files = $results_folder -> get_files_for_lane($lane,"Some pattern which won't match anywhere");
+
+
+      foreach my $file (@files) {
+
+	# Get the part of the path after the run folder
+	my $path = $file -> path();
+	$path =~ s/^.*$folder/$folder/;
+
+	# Tick off this file from the big list of files.
+	if (exists $existing_files{$path}) {
+	  $existing_files{$path} = 1;
+	}
+
+	if (-e $path and !$force) {
+	  # TODO: Should we compare file sizes here?
+	  next;
+	}
+
+	# Now we find out if the path to this file exists, and make it
+	# if it doesn't
+
+	unless ($method eq 'mock') {
+	  my @path_sections = split(/\//,$path);
+
+	  for my $index (0..($#path_sections-1)) {
+	    my $test_folder = join('/',@path_sections[0..$index]);
+	
+	    unless (-e $test_folder) {
+	      mkdir $test_folder or die "Can't create folder '$test_folder': $!\n";
+	    }
+
+	  }
+	}
+
+	# Finally we copy over the data in whichever way the user specified
+
+	if ($method eq 'mock') {
+	  warn "Mock run. Not copying $path\n";
+	}
+	elsif ($method eq 'copy') {
+	  warn "Copying $path\n";
+	  copy ($file->path(),$path) or die "Failed to copy ".$file->path()." to $path: $!\n";
+	}
+	elsif ($method eq 'hard') {
+	  link ($file->path(),$path) or die "Failed to hard link ".$file->path()." to $path: $!\n";
+	}
+	elsif ($method eq 'link') {
+	  symlink ($file->path(),$path) or die "Failed to symlink ".$file->path()." to $path: $!\n";
+	}
+
+
+      }
+    }
+
+  }
+
+  ## See if we have anything left in %existing_files
+  if ($delete_unmatched && keys %existing_files) {
+
+    open (EXISTING, '>>', "/home/andrewss/files_in_backup_not_primary.txt") or die "Can't open existing file list: $!";
+    foreach my $file (keys %existing_files) {
+      if ($existing_files{$file} == 0) {
+	print EXISTING $file,"\n";
+      }
+    }
+    close EXISTING;
+  }
+
+}
+
+
+__DATA__
+
+backup_sierra_data
+
+NAME
+
+  backup_sierra_data - Backup relevant data from a sierra setup
+
+SYNOPSIS
+
+  backup_sierra_data [OPTIONS] [FOLDER]
+
+DESCRIPTION
+
+  This script goes through all of the runs stored in a Sierra
+  database and creates a backup of the relevant files to a
+  secondary location.  The folder structure of the backup will
+  mirror exactly the structure of the original set of folders
+  but will contain only the files which are shown in the lane
+  summaries in Sierra.  The backup folder can be created by
+  either copying, hard-linking or symlinking the source files.
+
+  Options which can be applied are:
+
+  -m --method=M  Specifies how the backup is to be made.  M can
+                 be one of 'link','hard',or 'copy' which will
+                 symlink, hard link or copy the data to the
+                 backup.  If no method is supplied then copy is
+                 used.  The hard link option requires that the
+                 backup folder is on the same physical system
+                 as the run folders.  Both linking options are
+                 only valid on OSs and filesystems which support
+                 them.
+
+  -q --quiet     Supresses all progress information and only
+                 produces output in the event of an error.
+
+  -f --force     Overwrites existing files in the backup fodler.
+                 By default if a file exists in the output
+                 folder then this is skipped, so backups will
+                 incrementally add in new files only.
+
+  -h --help      Print out help instructions and exit.
+
+  -v --version   Print the program version and exit.
+
+AUTHOR
+
+  Written by Simon Andrews (simon.andrews@babraham.ac.uk)
+
+REPORTING BUGS
+
+  Please report any bugs to our bugzilla instance at:
+
+  www.bioinformatics.bbsrc.ac.uk/bugzilla/
+
+  Bugs should be filed under the Sierra product.
+

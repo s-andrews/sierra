@@ -1,0 +1,56 @@
+<!-- TMPL_INCLUDE NAME="header.html" -->
+<!-- TMPL_INCLUDE NAME="toolbar.html" -->
+<!-- TMPL_INCLUDE NAME="user_menu.html" -->
+
+    <div id="main">
+  <!-- TMPL_IF NAME=INSTRUMENT_ID -->
+  <h2>Edit Instrument</h2>
+  <!-- TMPL_ELSE -->
+  <h2>Create new instrument</h2>
+  <!-- /TMPL_IF -->
+
+  <form action="sierra.pl" method="POST">
+    <input type="hidden" name="action" value="finish_edit_instrument">
+    <!-- TMPL_IF NAME=INSTRUMENT_ID -->
+    <input type="hidden" name="instrument_id" value="<!-- TMPL_VAR NAME=INSTRUMENT_ID -->">
+    <!-- /TMPL_IF -->
+  <table>
+    <tr>
+      <th>Serial No</th>
+      <td><input type="text" name="serial" value="<!-- TMPL_VAR NAME=SERIAL ESCAPE=HTML -->"></td>
+    </tr>
+    <tr>
+      <th>Description</th>
+      <td><input type="text" name="description" value="<!-- TMPL_VAR NAME=DESCRIPTION ESCAPE=HTML -->"></td>
+    </tr>
+    <!-- TMPL_IF NAME=INSTRUMENT_ID -->
+    <tr>
+      <th>Retired</th>
+      <td>
+	<input type="checkbox" name="retired" <!-- TMPL_IF NAME=RETIRED -->checked<!-- /TMPL_IF -->>
+      </td>
+    </tr>
+    <!-- /TMPL_IF -->
+    <tr>
+      <th>Run Types</th>
+      <td>
+	<select name="run_type" size="5" multiple="multiple">
+	  <!-- TMPL_LOOP NAME=RUN_TYPES -->
+	  <option value="<!-- TMPL_VAR NAME=ID ESCAPE=HTML -->" <!-- TMPL_IF NAME=SELECTED -->selected<!-- /TMPL_IF -->><!-- TMPL_VAR NAME=NAME ESCAPE=HTML --></option>
+	  <!-- /TMPL_LOOP -->
+
+	</select>
+    </tr>
+
+  </table>
+  <p class="center">
+    <!-- TMPL_IF NAME=INSTRUMENT_ID -->
+  <input type="submit" value="Submit changes">
+  <!-- TMPL_ELSE -->
+  <input type="submit" value="Create New Instrument">
+  <!-- /TMPL_IF -->
+</p>
+  </form>
+    </div>
+
+<!-- TMPL_INCLUDE NAME="footer.html" -->

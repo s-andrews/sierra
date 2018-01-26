@@ -1,0 +1,322 @@
+#!/usr/bin/perl
+
+##########################################################################
+#                                                                        #
+# Copyright 2011-12, Simon Andrews (simon.andrews@babraham.ac.uk)        #
+#                                                                        #
+# This file is part of Sierra.                                           #
+#                                                                        #
+# Sierra is free software: you can redistribute it and/or modify         #
+# it under the terms of the GNU General Public License as published by   #
+# the Free Software Foundation, either version 3 of the License, or      #
+# (at your option) any later version.                                    #
+#                                                                        #
+# Sierra is distributed in the hope that it will be useful,              #
+# but WITHOUT ANY WARRANTY; without even the implied warranty of         #
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          #
+# GNU General Public License for more details.                           #
+#                                                                        #
+# You should have received a copy of the GNU General Public License      #
+# along with Sierra.  If not, see <http://www.gnu.org/licenses/>.        #
+##########################################################################
+
+use warnings;
+use strict;
+use DBI;
+use Term::ReadKey;
+use FindBin qw($Bin);
+use lib "$Bin/../source";
+use Sierra::Constants;
+
+############################################################
+## This script is designed to be run after every update of #
+## Sierra.  It checks the format of the database and makes #
+## any corrections needed for the new release.  There      #
+## should be no harm in running this script against an     #
+## already updated version of the database                 #
+############################################################
+
+
+## First we need to collect a username and password we
+## can use to connect to the database with sufficient
+## privileges to make changes to the structure of the
+## sierra database.
+
+my ($user,$pass) = collect_username();
+
+# We can now try to connect to the database
+my $dbh = DBI->connect("DBI:mysql:database=$Sierra::Constants::DB_NAME;host=$Sierra::Constants::DB_SERVER",$user,$pass,{RaiseError=>0,AutoCommit=>1});
+
+unless ($dbh) {
+  die ("Couldn't connect to Sierra database: ".$DBI::errstr);
+}
+
+check_database();
+
+$dbh->disconnect();
+
+
+sub check_database {
+
+  upgrade_12();
+  upgrade_23();
+  upgrade_34();
+
+}
+
+
+sub upgrade_12 {
+
+  warn "Upgrading from v0.1 to v0.2\n\n";
+
+  # Check for the lane field in the instrument table
+  my ($found_instrument) = $dbh->selectrow_array("SELECT column_name FROM information_schema.columns where table_schema=? AND table_name=? AND column_name=?",undef,($Sierra::Constants::DB_NAME,'instrument','lanes'));
+
+  unless ($found_instrument) {
+    warn "No lanes field on instrument table - adding\n";
+
+    $dbh->do("ALTER TABLE instrument ADD lanes INT") or die "Couldn't add lanes field to instrument table: ".$dbh->errstr();
+
+    $dbh->do("UPDATE instrument SET lanes=8") or die "Couldn't set lanes to 8 for existing instruments: ".$dbh->errstr();
+
+    warn "Lanes field added and set to 8 for existing instruments\n\n";
+  }
+
+  else {
+    warn "Lanes field OK\n\n";
+  }
+
+  # Check for the barcode table
+  my ($found_barcodes) = $dbh->selectrow_array("SELECT table_name FROM information_schema.tables where table_schema=? AND table_name=?",undef,($Sierra::Constants::DB_NAME,'barcode'));
+
+  unless ($found_barcodes) {
+    warn "Creating barcode table\n";
+
+    $dbh->do("CREATE TABLE barcode(id INT AUTO_INCREMENT PRIMARY KEY,sample_id INT,5_prime_barcode VARCHAR(50),3_prime_barcode VARCHAR(50),name VARCHAR(200),KEY (sample_id))")  or die "Couldn't create barcode table: ".$dbh->errstr();
+
+    # Add the necessary delete permission on this table
+    $dbh->do("GRANT DELETE on barcode TO $Sierra::Constants::DB_USERNAME\@localhost") or die "Can't add delete permission to barcode table:".$dbh->errstr();
+    $dbh->do("FLUSH PRIVILEGES");
+
+    warn "Barcode table added\n\n";
+
+  }
+  else {
+    warn "Barcode table OK\n\n";
+  }
+
+  # Check for per sample permissions table
+  my ($found_sample_permissions) = $dbh->selectrow_array("SELECT table_name FROM information_schema.tables where table_schema=? AND table_name=?",undef,($Sierra::Constants::DB_NAME,'sample_permission'));
+
+  unless ($found_sample_permissions) {
+    warn "Creating sample permissions table\n";
+
+    $dbh->do("CREATE TABLE sample_permission (id INT AUTO_INCREMENT PRIMARY KEY,sample_id INT,permission_person_id INT,KEY (sample_id),KEY (permission_person_id))")  or die "Couldn't create sample_permission table: ".$dbh->errstr();
+
+    warn "Sample permission table added\n\n";
+
+  }
+  else {
+    warn "Sample permission table OK\n\n";
+  }
+
+
+}
+
+sub upgrade_23 {
+
+  warn "Upgrading from v0.2 to v0.3\n";
+
+  # Check for the qc field in the sample table
+  my ($found_qc) = $dbh->selectrow_array("SELECT column_name FROM information_schema.columns where table_schema=? AND table_name=? AND column_name=?",undef,($Sierra::Constants::DB_NAME,'sample','passed_qc_date'));
+
+  unless ($found_qc) {
+    warn "No qc field on sample table - adding\n";
+
+    $dbh->do("ALTER TABLE sample ADD passed_qc_date DATETIME") or die "Couldn't add passed_qc field to sample table: ".$dbh->errstr();
+    $dbh->do("ALTER TABLE sample ADD INDEX(passed_qc_date)") or die "Couldn't index passed_qc_date field in sample table: ".$dbh->errstr();
+
+    $dbh->do("UPDATE sample SET passed_qc_date=received_date") or die "Couldn't set passed_qc_date to received on samples table: ".$dbh->errstr();
+
+    warn "QC field added and set to received date for existing samples\n\n";
+  }
+
+  else {
+    warn "QC field OK\n\n";
+  }
+
+  # Check for the budget code field in the sample table
+  my ($found_budget) = $dbh->selectrow_array("SELECT column_name FROM information_schema.columns where table_schema=? AND table_name=? AND column_name=?",undef,($Sierra::Constants::DB_NAME,'sample','budget_code'));
+
+  unless ($found_budget) {
+    warn "No budget_code field on sample table - adding\n";
+
+    $dbh->do("ALTER TABLE sample ADD budget_code VARCHAR(100)") or die "Couldn't add budget_code field to sample table: ".$dbh->errstr();
+    $dbh->do("ALTER TABLE sample ADD INDEX(budget_code)") or die "Couldn't index budget_code field in sample table: ".$dbh->errstr();
+
+    warn "Budget code field added\n\n";
+  }
+
+  else {
+    warn "Budget code field OK\n\n";
+  }
+
+  # Check for the anonymous field in the person table
+  my ($found_anonymous) = $dbh->selectrow_array("SELECT column_name FROM information_schema.columns where table_schema=? AND table_name=? AND column_name=?",undef,($Sierra::Constants::DB_NAME,'person','anonymous'));
+
+  unless ($found_anonymous) {
+    warn "No anonymous field on person table - adding\n";
+
+    $dbh->do("ALTER TABLE person ADD anonymous BOOLEAN") or die "Couldn't add anonymous field to person table: ".$dbh->errstr();
+
+    warn "Anonymous field added\n\n";
+  }
+
+  else {
+    warn "Anonymous field OK\n\n";
+  }
+
+  # Check for the presence of the adapter table
+  my ($found_adapter) = $dbh->selectrow_array("SELECT table_name FROM information_schema.tables where table_schema=? AND table_name=?",undef,($Sierra::Constants::DB_NAME,'adapter'));
+
+  unless ($found_adapter) {
+    warn "Creating adapter table\n";
+
+    $dbh->do("CREATE TABLE adapter (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(200), retired BOOLEAN)")  or die "Couldn't create adapter table: ".$dbh->errstr();
+
+    # Add the necessary delete permission on this table
+    $dbh->do("GRANT UPDATE on adapter TO $Sierra::Constants::DB_USERNAME\@localhost") or die "Can't add update permission to adapter table:".$dbh->errstr();
+    $dbh->do("FLUSH PRIVILEGES");
+
+
+    warn "Adapter table added\n\n";
+
+  }
+  else {
+    warn "Adapter table OK\n\n";
+  }
+
+  # Check for the adpater_id field in the sample
+  my ($found_adapter_id) = $dbh->selectrow_array("SELECT column_name FROM information_schema.columns where table_schema=? AND table_name=? AND column_name=?",undef,($Sierra::Constants::DB_NAME,'sample','adapter_id'));
+
+  unless ($found_adapter_id) {
+    warn "No adapter_id field on sample table - adding\n";
+
+    $dbh->do("ALTER TABLE sample ADD adapter_id INT") or die "Couldn't add adapter_id field to sample table: ".$dbh->errstr();
+    $dbh->do("ALTER TABLE sample ADD INDEX(adapter_id)") or die "Couldn't index adapter_id field in sample table: ".$dbh->errstr();
+
+    warn "Adapter ID field added\n\n";
+  }
+
+  else {
+    warn "Adapter ID field OK\n\n";
+  }
+
+  # Remove the lanes field from the instrument table and add it to the run_type table
+  # instead
+  my ($found_instrument_lanes) = $dbh->selectrow_array("SELECT column_name FROM information_schema.columns where table_schema=? AND table_name=? AND column_name=?",undef,($Sierra::Constants::DB_NAME,'instrument','lanes'));
+
+  # TODO: Figure out why this comes back true even though that column
+  # has been deleted.  I've given up triyng to work this out!
+
+  if ($found_instrument_lanes) {
+    warn "Lanes field found on instrument table - deleting\n";
+
+    $dbh->do("ALTER TABLE instrument DROP COLUMN lanes") or die "Can't delete lanes from instrument: ".$dbh->errstr();
+  }
+
+  my ($found_run_description) = $dbh->selectrow_array("SELECT column_name FROM information_schema.columns where table_schema=? AND table_name=? AND column_name=?",undef,($Sierra::Constants::DB_NAME,'run_type','description'));
+
+
+  if ($found_run_description) {
+    warn "Description field found on run_type table - deleting\n";
+
+    $dbh->do("ALTER TABLE run_type DROP COLUMN description") or die "Can't delete description from instrument: ".$dbh->errstr();
+  }
+
+
+  # Add a lanes field to all runs.  We'll default to 8 lanes for each run
+  # but they'll need to change this.
+
+    my ($found_run_lanes) = $dbh->selectrow_array("SELECT column_name FROM information_schema.columns where table_schema=? AND table_name=? AND column_name=?",undef,($Sierra::Constants::DB_NAME,'run_type','lanes'));
+
+  unless ($found_run_lanes) {
+    warn "No lanes field found on run table - adding\n";
+
+    $dbh->do("ALTER TABLE run_type ADD lanes INT") or die "Can't add lanes to run_type: ".$dbh->errstr();
+    $dbh->do("UPDATE run_type SET lanes=8") or die "Can't set new lanes to 8:".$dbh->errstr();
+  }
+
+
+
+
+}
+
+
+sub upgrade_34 {
+
+  warn "Upgrading from v0.3 to v0.4\n";
+
+  # Check for the sample_auth_key table
+  my ($found_auth_table) = $dbh->selectrow_array("SELECT table_name FROM information_schema.tables where table_schema=? AND table_name=?",undef,($Sierra::Constants::DB_NAME,'sample_auth_key'));
+
+  unless ($found_auth_table) {
+    warn "Creating sample_auth_key table\n";
+
+    $dbh->do("CREATE TABLE sample_auth_key (
+	id INT AUTO_INCREMENT PRIMARY KEY,
+       	sample_id INT,
+	person_id INT,
+	authkey VARCHAR(50),
+        message VARCHAR(200),
+	KEY (sample_id),
+	KEY (person_id),
+	KEY (authkey)
+      )")  or die "Couldn't create adapter table: ".$dbh->errstr();
+
+    # Add the necessary delete permission on this table
+    $dbh->do("GRANT DELETE on sample_auth_key TO $Sierra::Constants::DB_USERNAME\@localhost") or die "Can't add update permission to adapter table:".$dbh->errstr();
+    $dbh->do("FLUSH PRIVILEGES");
+
+
+    warn "Sample auth key table added\n\n";
+
+  }
+  else {
+    warn "Sample auth key table OK\n\n";
+  }
+
+}
+
+
+
+
+sub collect_username {
+
+  print "\nThis script needs to access your database with sufficient\nprivileges to make changes to the database structure.\nPlease enter a username and password for a user with\nsufficient privileges to do this. If your normal sierra\nuser can do this then don't enter a password and the\ndefault login will be used.\n\n";
+
+  print "Username:";
+
+  my $username = <STDIN>;
+  chomp $username;
+
+  my $password;
+  if ($username) {
+    print "Password:";
+    ReadMode('noecho');
+    $password = <STDIN>;
+    chomp $password;
+    ReadMode('normal');
+    print "\n\n";
+  }
+
+  else {
+    warn "Using default username and password\n\n";
+    $username = $Sierra::Constants::DB_USERNAME;
+    $password = $Sierra::Constants::DB_PASSWORD;
+  }
+
+  return ($username,$password);
+
+}
+

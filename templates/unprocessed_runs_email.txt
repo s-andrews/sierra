@@ -1,0 +1,18 @@
+<!-- TMPL_IF NAME=RUNS -->
+One or more runs appears to have finished, but has not yet been processed.  The list of outstanding runs is below.  The status codes mean:
+
+Missing: No matching run folder could be seen
+
+Running: The run folder is present but the RTAComplete.txt file is missing
+
+Unprocessed: The RTAComplete.txt file is present but no results folders were found
+
+Unanalysed: The run is processed but no data files are under the Aligned folder. For runs which don't need to be analysed put an 'unanalysed.flag' file into the run folder root.
+
+<!-- TMPL_LOOP NAME=RUNS -->
+  <!-- TMPL_VAR NAME=STATUS --> <!-- TMPL_VAR NAME=FOLDER -->
+<!-- TMPL_VAR NAME=SAMPLES -->
+<!-- /TMPL_LOOP -->
+<!-- TMPL_ELSE -->
+There are no outstanding unprocessed runs
+<!-- /TMPL_IF -->

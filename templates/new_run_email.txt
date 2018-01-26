@@ -1,0 +1,9 @@
+A new <!-- TMPL_VAR NAME=RUN_TYPE --> sequencing run has been started for flowcell <!-- TMPL_VAR NAME=FLOWCELL_ID --> and some of your samples have been included.
+
+Your samples on this run are:
+
+<!-- TMPL_LOOP NAME=SAMPLES -->
+  - Sample <!-- TMPL_VAR NAME=SAMPLE_ID --> <!-- TMPL_VAR NAME=SAMPLE_NAME --> <!-- TMPL_VAR NAME=USER_NAME -->
+<!-- /TMPL_LOOP -->
+
+Depending on the length of the run you may not see results appearing in Sierra for a few days.  You should receive an additional email when the results for this run become available.

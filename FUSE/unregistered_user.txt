@@ -1,0 +1,8 @@
+This is a virtual folder in which you can look at sequencing data from Sierra.
+
+Data will only appear in this folder once you are registered on the system by
+an administrator.  At the moment you are not registered, which is why you are
+seeing this message.
+
+Please contact the adminsitrator of your Sierra system who can arrange to 
+register you and thereby give you access to your data from within this folder.

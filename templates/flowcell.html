@@ -1,0 +1,216 @@
+<!-- TMPL_INCLUDE NAME="header.html" -->
+<!-- TMPL_INCLUDE NAME="toolbar.html" -->
+<!-- TMPL_INCLUDE NAME="user_menu.html" -->
+
+    <div id="main">
+
+  <!-- TMPL_IF NAME=FLOWCELL_ID -->
+
+  <h2>Flowcell <!-- TMPL_VAR NAME=FLOWCELL_ID ESCAPE=HTML --></h2>
+
+
+  <!-- TMPL_IF NAME=RUN_ID -->
+
+  <h3>Run Information</h3>
+  <table>
+    <tr>
+      <th>Run ID</th>
+      <td><!-- TMPL_VAR NAME=RUN_ID ESCAPE=HTML --></td>
+    </tr>
+    <tr>
+      <th>Run Folder</th>
+      <td><!-- TMPL_VAR NAME=RUN_FOLDER ESCAPE=HTML --></td>
+    </tr>
+    <tr>
+      <th>Run Type</th>
+      <td><!-- TMPL_VAR NAME=RUN_TYPE ESCAPE=HTML --></td>
+    </tr>
+    <tr>
+      <th>Flowcell Serial Number</th>
+      <td><!-- TMPL_VAR NAME=FLOWCELL_SERIAL ESCAPE=HTML --></td>
+    </tr>
+    <tr>
+      <th>Run Date</th>
+      <td><!-- TMPL_VAR NAME=RUN_DATE ESCAPE=HTML --></td>
+    </tr>
+    <tr>
+      <th>Machine</th>
+      <td><!-- TMPL_VAR NAME=MACHINE ESCAPE=HTML --></td>
+  </table>
+
+  <!-- /TMPL_IF -->
+
+  <h3>Samples</h3>
+
+  <table>
+    <tr>
+      <th>Lane<br>(*control)</th>
+      <th>Sample ID</th>
+      <th>User Sample Name</th>
+      <th>Barcodes</th>
+      <th>Sample Type</th>
+      <th>Search DB</th>
+      <th>Owner</th>
+      <!-- TMPL_IF NAME=RUN_ID -->
+      <th>Lane ID</th>
+      <!-- TMPL_ELSE -->
+      <th>Remove Sample</th>
+      <!-- /TMPL_IF -->
+    </tr>
+    <!-- TMPL_LOOP NAME=LANES -->
+    <tr>
+      <td><!-- TMPL_IF NAME=IS_CONTROL -->*<!-- /TMPL_IF --><!-- TMPL_VAR NAME=LANE ESCAPE=HTML --></td>
+      <!-- TMPL_IF NAME=SAMPLE_ID -->
+      <td><a href="sierra.pl?action=view_sample&amp;sample_id=<!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML -->">Sample <!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML --></a></td>
+      <td><!-- TMPL_VAR NAME=SAMPLE_NAME ESCAPE=HTML --></td>
+      <td><!-- TMPL_VAR NAME=BARCODES ESCAPE=HTML --></td>
+      <td><!-- TMPL_VAR NAME=SAMPLE_TYPE ESCAPE=HTML --></td>
+      <td><!-- TMPL_VAR NAME=SEARCH_DB --></td>
+      <td><!-- TMPL_VAR NAME=OWNER ESCAPE=HTML --></td>
+      <!-- TMPL_IF NAME=RUN_ID -->
+      <td><a href="sierra.pl?action=view_lane&amp;lane_id=<!-- TMPL_VAR NAME=LANE_ID ESCAPE=HTML -->">Lane <!-- TMPL_VAR NAME=LANE_ID ESCAPE=HTML --></a></td>
+      <!-- TMPL_ELSE -->
+      <td><a href="sierra.pl?action=remove_sample&amp;lane_id=<!-- TMPL_VAR NAME=LANE_ID ESCAPE=HTML -->">Remove</a></td>
+      <!-- /TMPL_IF -->
+      <!-- TMPL_ELSE -->
+      <td colspan="7" class="center">Empty</td>
+      <!-- /TMPL_IF -->
+    </tr>
+    <!-- /TMPL_LOOP -->
+  </table>
+
+  <!-- TMPL_IF NAME=FREE_LANES -->
+
+  <h3>Available Controls</h3>
+
+  <table>
+    <tr>
+      <th>Sample ID</th>
+      <th>Sample Name</th>
+      <th>Add to Lane</th>
+    </tr>
+
+    <!-- TMPL_IF NAME=AVAILABLE_CONTROLS -->
+
+    <!-- TMPL_LOOP NAME=AVAILABLE_CONTROLS -->
+    <tr>
+      <td><!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML --></td>
+      <td><!-- TMPL_VAR NAME=NAME ESCAPE=HTML --></td>
+      <td nowrap><form action="sierra.pl" method="GET">
+	  <input type="hidden" name="action" value="add_lane">
+	  <input type="hidden" name="flowcell_id" value="<!-- TMPL_VAR NAME=FLOWCELL_ID ESCAPE=HTML -->">
+	  <input type="hidden" name="sample_id" value="<!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML -->">
+	  <select name="lane">
+	    <!-- TMPL_LOOP NAME=FREE_LANES -->
+	    <option value="<!-- TMPL_VAR NAME=LANE_NUMBER ESCAPE=HTML -->"><!-- TMPL_VAR NAME=LANE_NUMBER ESCAPE=HTML --></option>
+	    <!-- /TMPL_LOOP -->
+	  <input type="submit" value="Add">
+	</form>
+      </td>
+    </tr>
+    <!-- /TMPL_LOOP -->
+
+    <!-- TMPL_ELSE -->
+    <tr>
+      <td colspan="3" class="center">No Available Controls</td>
+    </tr>
+    <!-- /TMPL_IF -->
+  </table>  
+
+  <h3>Available Samples</h3>
+
+  <table>
+    <tr>
+      <th>Sample ID</th>
+      <th>Sample Name</th>
+      <th>Owner</th>
+      <th>Passed QC</th>
+      <th>Lanes Requested</th>
+      <th>Lanes Run</th>
+      <th>Add to Lane</th>
+    </tr>
+
+    <!-- TMPL_IF NAME=AVAILABLE_SAMPLES -->
+
+    <!-- TMPL_LOOP NAME=AVAILABLE_SAMPLES -->
+    <tr>
+      <td><a href="sierra.pl?action=view_sample&amp;sample_id=<!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML-->">Sample <!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML --></a></td>
+      <td><!-- TMPL_VAR NAME=NAME ESCAPE=HTML --></td>
+      <td><!-- TMPL_VAR NAME=OWNER ESCAPE=HTML --></td>
+      <td><!-- TMPL_VAR NAME=PASSED_QC ESCAPE=HTML --></td>
+      <td><!-- TMPL_VAR NAME=LANES_REQUESTED ESCAPE=HTML --></td>
+      <td><!-- TMPL_VAR NAME=LANES_RUN ESCAPE=HTML --></td>
+      <td nowrap><form action="sierra.pl" method="GET">
+	  <input type="hidden" name="action" value="add_lane">
+	  <input type="hidden" name="flowcell_id" value="<!-- TMPL_VAR NAME=FLOWCELL_ID ESCAPE=HTML -->">
+	  <input type="hidden" name="sample_id" value="<!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML -->">
+	  <select name="lane">
+	    <!-- TMPL_LOOP NAME=FREE_LANES -->
+	    <option value="<!-- TMPL_VAR NAME=LANE_NUMBER ESCAPE=HTML -->"><!-- TMPL_VAR NAME=LANE_NUMBER ESCAPE=HTML --></option>
+	    <!-- /TMPL_LOOP -->
+	  <input type="submit" value="Add">
+	</form>
+      </td>
+    </tr>
+    <!-- /TMPL_LOOP -->
+
+    <!-- TMPL_ELSE -->
+    <tr>
+      <td colspan="7" class="center">No Available Samples</td>
+    </tr>
+    <!-- /TMPL_IF -->
+  </table>  
+
+  <!-- TMPL_ELSE -->
+
+  <!-- TMPL_IF NAME=RUN_ID -->
+
+
+  <!-- TMPL_ELSE -->
+  <form action="sierra.pl" method="GET"><input type="hidden" name="action" value="create_run">
+    <input type="hidden" name="flowcell_id" value="<!-- TMPL_VAR NAME=FLOWCELL_ID ESCAPE=HTML -->">
+    <p class="center">
+      <input type="submit" value="Create a Run from this Flowcell">
+    </p>
+  </form>
+  <!-- /TMPL_IF -->
+  <!-- /TMPL_IF -->
+
+
+
+
+  <!-- TMPL_ELSE -->
+  <h2>Create New Flowcell</h2>
+
+  <form method="POST" action="sierra.pl">
+    <input type="hidden" name="action" value="new_flowcell">
+  <table>
+    <tr>
+      <th>Serial Number</th>
+      <td><input type="text" name="serial" size="30"></td>
+    </tr>
+    <tr>
+      <th>Run type</th>
+      <td>
+	<!-- TMPL_IF NAME=RUN_TYPES -->
+
+	<!-- TMPL_LOOP NAME=RUN_TYPES -->
+	<p>
+	<input type="radio" name="run_type" value="<!-- TMPL_VAR NAME=ID ESCAPE=HTML -->"><!-- TMPL_VAR NAME=NAME ESCAPE=HTML --> (<!-- TMPL_VAR NAME=PENDING_COUNT ESCAPE=HTML--> Lanes Pending)
+	</p>
+	<!-- /TMPL_LOOP -->
+	<!-- TMPL_ELSE -->
+	There are no pending samples from which to make a flowcell
+	<!-- /TMPL_IF -->
+
+    </tr>
+  </table>
+  <p class="center"><input type="submit" value="Create Flowcell"></p>
+  </form>
+
+  <!-- /TMPL_IF -->
+    </div>
+
+
+
+<!-- TMPL_INCLUDE NAME="footer.html" -->

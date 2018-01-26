@@ -1,0 +1,16 @@
+New sequencing results have been found for one or more samples which you have previously run.
+
+These results should now be visible to you on Sierra.
+
+Your new results come from the following samples:
+<!-- TMPL_LOOP NAME=RUNS -->
+
+Run <!-- TMPL_VAR NAME=RUN --> on Flowcell <!-- TMPL_VAR NAME=FLOWCELL_ID --> in folder <!-- TMPL_VAR NAME=RUN_FOLDER -->
+
+<!-- TMPL_LOOP NAME=SAMPLES -->
+  - Lane <!-- TMPL_VAR NAME=LANE_ID --> Sample <!-- TMPL_VAR NAME=SAMPLE_ID --> <!-- TMPL_VAR NAME=SAMPLE_NAME --> <!-- TMPL_VAR NAME=USER_NAME -->
+<!-- /TMPL_LOOP -->
+
+<!-- /TMPL_LOOP -->
+Further results may be added to these runs in the future, and you will receive an additional email should more results be added to any of these runs.
+

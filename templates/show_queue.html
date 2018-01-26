@@ -1,0 +1,88 @@
+<!-- TMPL_INCLUDE NAME="header.html" -->
+<!-- TMPL_INCLUDE NAME="toolbar.html" -->
+<!-- TMPL_INCLUDE NAME="user_menu.html" -->
+
+    <div id="main">
+
+
+  <h2>Samples in the queue</h2>
+
+  <!-- TMPL_IF NAME=IS_ADMIN -->
+
+  <table>
+    <tr>
+      <th>Sample ID</th>
+      <th>Sample Name</th>
+      <th>Owner</th>
+      <th>Run type</th>
+      <th>Received</th>
+      <th>Passed QC</th>
+      <th>Lanes Requested</th>
+      <th>Lanes Run</th>
+    </tr>
+
+    <!-- TMPL_IF NAME=ACTIVE_SAMPLES -->
+
+    <!-- TMPL_LOOP NAME=ACTIVE_SAMPLES -->
+    <tr>
+      <td><a href="sierra.pl?action=view_sample&amp;sample_id=<!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML -->">Sample <!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML --></a></td>
+      <td><!-- TMPL_VAR NAME=NAME ESCAPE=HTML --></td>
+      <td><!-- TMPL_VAR NAME=OWNER ESCAPE=HTML --></td>
+      <td><!-- TMPL_VAR NAME=RUN_TYPE ESCAPE=HTML --></td>
+      <td><!-- TMPL_IF NAME=RECEIVED --><!-- TMPL_VAR NAME=RECEIVED ESCAPE=HTML --><!-- TMPL_ELSE --><!-- TMPL_IF NAME=IS_ADMIN --><a href="sierra.pl?action=receive_sample&amp;sample_id=<!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML -->">Receive</a><!-- TMPL_ELSE -->Not Yet Received<!-- /TMPL_IF--><!-- /TMPL_IF --></td>
+      <td><!-- TMPL_IF NAME=RECEIVED --><!-- TMPL_IF NAME=PASSED_QC --><!-- TMPL_VAR NAME=PASSED_QC ESCAPE=HTML --><!-- TMPL_ELSE --><!-- TMPL_IF NAME=IS_ADMIN --><a href="sierra.pl?action=pass_qc_sample&amp;sample_id=<!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML -->">Pass QC</a><!-- TMPL_ELSE -->Not Passed QC<!-- /TMPL_IF--><!-- /TMPL_IF --><!-- TMPL_ELSE -->Not Received<!-- /TMPL_IF --></td>
+      <td><!-- TMPL_VAR NAME=LANES_REQUESTED ESCAPE=HTML --></td>
+      <td><!-- TMPL_VAR NAME=LANES_RUN ESCAPE=HTML --></td>
+    </tr>
+    <!-- /TMPL_LOOP -->
+
+    <!-- TMPL_ELSE -->
+    <tr>
+      <td colspan="8" class="center">No Active Samples</td>
+    </tr>
+    <!-- /TMPL_IF -->
+
+  </table>  
+
+  <!-- TMPL_ELSE -->
+  <table>
+    <tr>
+      <th>Run Type</th>
+      <th>Lanes Requested</th>
+      <th>Owner</th>
+      <th>Submitted</th>
+      <th>Received</th>
+      <th>Passed QC</th>
+    </tr>
+
+    <!-- TMPL_IF NAME=QUEUE_STATUS -->
+
+    <!-- TMPL_LOOP NAME=QUEUE_STATUS -->
+    <tr>
+      <td><!-- TMPL_VAR NAME=RUN_TYPE ESCAPE=HTML --></td>
+      <td><!-- TMPL_VAR NAME=LANES_REQUESTED ESCAPE=HTML --></td>
+      <td><!-- TMPL_VAR NAME=OWNER ESCAPE=HTML --></td>
+      <td><!-- TMPL_VAR NAME=SUBMITTED ESCAPE=HTML --></td>
+      <td><!-- TMPL_IF NAME=RECEIVED --><!-- TMPL_VAR NAME=RECEIVED ESCAPE=HTML --><!-- TMPL_ELSE -->Not Yet Received<!-- /TMPL_IF --></td>
+      <td><!-- TMPL_IF NAME=PASSED --><!-- TMPL_VAR NAME=PASSED ESCAPE=HTML --><!-- TMPL_ELSE -->Awaiting QC<!-- /TMPL_IF --></td>
+    </tr>
+    <!-- /TMPL_LOOP -->
+
+    <!-- TMPL_ELSE -->
+    <tr>
+      <td colspan="5" class="center">No Samples in the Queue</td>
+    </tr>
+    <!-- /TMPL_IF -->
+
+  </table>  
+
+
+
+  <!-- /TMPL_IF -->
+
+
+    </div>
+
+
+
+<!-- TMPL_INCLUDE NAME="footer.html" -->

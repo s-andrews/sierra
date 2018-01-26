@@ -1,0 +1,20 @@
+<!-- TMPL_INCLUDE NAME="header.html" -->
+
+  <h2 class="center">There was a problem processing your request</h2>
+
+  <p class="warning"><!-- TMPL_VAR NAME=MESSAGE --></p>
+
+  <p class="center">
+      These errors can usually be fixed by using the back button on your browser
+      to go to the previous page and changing the options you selected.
+    </p>
+  <p class="center">
+      If you don't think that this error is something you can correct yourself
+      then please report this to
+    <a href="mailto:<!-- TMPL_VAR NAME=ADMIN_EMAIL ESCAPE=HTML -->"><!-- TMPL_VAR NAME=ADMIN_NAME ESCAPE=HTML--></a>
+  </p>
+
+
+
+
+<!-- TMPL_INCLUDE NAME="footer.html" -->

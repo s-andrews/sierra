@@ -1,0 +1,44 @@
+<!-- TMPL_INCLUDE NAME="header.html" -->
+<!-- TMPL_INCLUDE NAME="toolbar.html" -->
+<!-- TMPL_INCLUDE NAME="user_menu.html" -->
+
+    <div id="main">
+  <h2>Run Search Results</h2>
+
+  <table>
+    <tr>
+      <th>Run ID</th>
+      <th>Flowcell ID</th>
+      <th>Run Folder</th>
+      <th>Run Type</th>
+      <th>Date</th>
+    </tr>
+
+    <!-- TMPL_IF NAME=RUNS -->
+
+    <!-- TMPL_LOOP NAME=RUNS -->
+    <tr>
+      <td>Run <!-- TMPL_VAR NAME=RUN_ID ESCAPE=HTML --></td>
+      <td><a href="sierra.pl?action=view_flowcell&amp;flowcell_id=<!-- TMPL_VAR NAME=FLOWCELL_ID ESCAPE=HTML -->">Flowcell <!-- TMPL_VAR NAME=FLOWCELL_ID ESCAPE=HTML --></a></td>
+      <td><!-- TMPL_VAR NAME=RUN_FOLDER ESCAPE=HTML --></td>
+      <td><!-- TMPL_VAR NAME=RUN_TYPE ESCAPE=HTML --></td>
+      <td><!-- TMPL_VAR NAME=DATE ESCAPE=HTML --></td>
+    </tr>
+    <!-- /TMPL_LOOP -->
+
+    <!-- TMPL_ELSE -->
+    <tr>
+      <td colspan="6" class="center">No Runs Found</td>
+    </tr>
+    <!-- /TMPL_IF -->
+
+  </table>  
+
+
+
+
+    </div>
+
+
+
+<!-- TMPL_INCLUDE NAME="footer.html" -->

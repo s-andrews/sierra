@@ -1,0 +1,170 @@
+<!-- TMPL_INCLUDE NAME="header.html" -->
+
+<!-- TMPL_IF NAME=PERSON_ID -->
+<!-- TMPL_INCLUDE NAME="toolbar.html" -->
+<!-- TMPL_INCLUDE NAME="user_menu.html" -->
+<!-- /TMPL_IF -->
+
+    <div id="main">
+  <h2>Sample <!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML --> (<!-- TMPL_VAR NAME=USER_SAMPLE_ID ESCAPE=HTML -->)</h2>
+
+  <table>
+    <tr>
+      <th>Sample ID</th>
+      <td><!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML --></td>
+    </tr>
+    <tr>
+      <th>Sample Status</th>
+      <td><!-- TMPL_IF NAME=IS_ACTIVE -->Active<!-- TMPL_ELSE -->Completed<!-- /TMPL_IF --></td>
+    <tr>
+      <th>Sample Name</th>
+      <td><!-- TMPL_VAR NAME=USER_SAMPLE_ID ESCAPE=HTML --></td>
+    </tr>
+    <tr>
+      <th>Owner</th>
+      <td><!-- TMPL_VAR NAME=SAMPLE_OWNER ESCAPE=HTML --></td>
+    </tr>
+    <tr>
+      <th>Sample Type</th>
+      <td><!-- TMPL_VAR NAME=SAMPLE_TYPE ESCAPE=HTML --></td>
+    </tr>
+    <tr>
+      <th>Adapter Type</th>
+      <td><!-- TMPL_IF NAME=ADAPTER --><!-- TMPL_VAR NAME=ADAPTER ESCAPE=HTML --><!-- TMPL_ELSE -->[No adapter specified]<!-- /TMPL_IF --></td>
+    </tr>
+    <tr>
+      <th>Lanes Requested</th>
+      <td><!-- TMPL_VAR NAME=LANES_REQUESTED ESCAPE=HTML --></td>
+    </tr>
+    <tr>
+      <th>Lanes Completed</th>
+      <td><!-- TMPL_VAR NAME=RESULT_COUNT ESCAPE=HTML --></td>
+    </tr>
+    <tr>
+      <th>Date Submitted</th>
+      <td><!-- TMPL_VAR NAME=SUBMITTED_DATE ESCAPE=HTML --></td>
+    </tr>
+    <tr>
+      <th>Date Received</th>
+      <td><!-- TMPL_IF NAME=DATE_RECEIVED --><!-- TMPL_VAR NAME=DATE_RECEIVED ESCAPE=HTML --><!-- TMPL_ELSE -->Not received<!-- /TMPL_IF --></td>
+    </tr>
+    <tr>
+      <th>Date Passed QC</th>
+      <td><!-- TMPL_IF NAME=DATE_PASSED_QC --><!-- TMPL_VAR NAME=DATE_PASSED_QC ESCAPE=HTML --><!-- TMPL_ELSE --><!-- TMPL_IF NAME=IS_ACTIVE -->Not passed<!-- TMPL_ELSE -->Failed QC<!-- /TMPL_IF --><!-- /TMPL_IF --></td>
+    </tr>
+    <tr>
+      <th>Run Type</th>
+      <td><!-- TMPL_VAR NAME=RUN_TYPE ESCAPE=HTML--></td>
+    </tr>
+    <tr>
+      <th>Search Database</th>
+      <td><!-- TMPL_IF NAME=SEARCH_DATABASE --><!-- TMPL_VAR NAME=SEARCH_DATABASE ESCAPE=HTML --><!-- TMPL_ELSE -->No mapping<!-- /TMPL_IF --></td>
+    </tr>
+
+  </table>  
+
+
+  <!-- TMPL_IF NAME=PERSON_ID -->
+  <form method="GET" action="sierra.pl">
+    <p class="center">
+      <input type="hidden" name="action" value="edit_sample">
+      <input type="hidden" name="sample_id" value="<!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML -->">
+      <input type="submit" value="Edit Sample Details">
+    </p>
+  </form>
+  <!-- /TMPL_IF -->
+
+
+  <!-- TMPL_IF NAME=BARCODES -->
+  <h3 id="barcodes">Barcodes</h3>
+
+  <table>
+    <tr>
+      <th>First Barcode</th>
+      <th>Second Barcode</th>
+      <th>Description</th>
+    </tr>
+
+    <!-- TMPL_LOOP NAME=BARCODES -->
+    <tr>
+      <td><!-- TMPL_IF NAME=5PRIME --><!-- TMPL_VAR NAME=5PRIME ESCAPE=HTML --><!-- TMPL_ELSE -->[None]<!-- /TMPL_IF --></td>
+      <td><!-- TMPL_IF NAME=3PRIME --><!-- TMPL_VAR NAME=3PRIME ESCAPE=HTML --><!-- TMPL_ELSE -->[None]<!-- /TMPL_IF --></td>
+      <td><!-- TMPL_VAR NAME=DESCRIPTION ESCAPE=HTML --></td>
+    </tr>
+    <!-- /TMPL_LOOP -->
+
+  </table>
+
+  <!-- TMPL_ELSE -->
+  <h3 id="barcodes">No Barcodes</h3>
+
+  <!-- /TMPL_IF -->
+
+  <!-- TMPL_IF NAME=RESULTS -->
+
+  <h3 id="results">Results</h3>
+
+    <table>
+    <tr>
+      <th>Date</th>
+      <th>Flowcell</th>
+      <th>Flowcell Position</th>
+      <th>Lane</th>
+    </tr>
+    <!-- TMPL_LOOP NAME=RESULTS -->
+    <tr>
+      <td><!-- TMPL_VAR NAME=DATE ESCAPE=HTML --></td>
+      <td>
+	<!-- TMPL_IF NAME=FLOWCELL_ID -->
+	<a href="sierra.pl?action=view_flowcell&amp;flowcell_id=<!-- TMPL_VAR NAME=FLOWCELL_ID ESCAPE=HTML -->"><!-- TMPL_VAR NAME=RUN_FOLDER ESCAPE=HTML --></a>
+	<!-- TMPL_ELSE -->
+	<!-- TMPL_VAR NAME=RUN_FOLDER ESCAPE=HTML -->
+	<!-- /TMPL_IF -->
+      </td>
+
+      <td><!-- TMPL_VAR NAME=LANE ESCAPE=HTML --></td>
+      <td><a href="sierra.pl?action=view_lane&amp;lane_id=<!-- TMPL_VAR NAME=LANE_ID ESCAPE=HTML --><!-- TMPL_IF NAME=AUTHKEY -->&amp;authkey=<!-- TMPL_VAR NAME=AUTHKEY ESCAPE=HTML --><!-- /TMPL_IF -->">Lane <!-- TMPL_VAR NAME=LANE_ID ESCAPE=HTML --></a></td>
+    </tr>
+
+    <!-- /TMPL_LOOP -->
+    </table>
+
+    <!-- TMPL_ELSE -->
+    <h3 id="results">No Results Available</h3>
+    <!-- /TMPL_IF -->
+
+
+
+
+  <!-- TMPL_IF NAME=NOTES -->
+  <h3 id="notes">Notes</h3>
+  <!-- TMPL_LOOP NAME=NOTES -->
+  <div class="note">
+    <h4>Note from <!-- TMPL_VAR NAME=FIRST_NAME ESCAPE=HTML --> <!-- TMPL_VAR NAME=LAST_NAME ESCAPE=HTML --> on <!-- TMPL_VAR NAME=DATE ESCAPE=HTML --></h4>
+
+    <!-- TMPL_LOOP NAME=PARAGRAPHS -->
+    <p><!-- TMPL_VAR NAME=TEXT ESCAPE=HTML --></p>
+    <!-- /TMPL_LOOP -->
+
+  </div>
+  <!-- /TMPL_LOOP -->
+  <!-- TMPL_ELSE -->
+  <h3 id="notes">No Notes</h3>
+  <!-- /TMPL_IF -->
+
+  <!-- TMPL_IF NAME=PERSON_ID -->
+
+  <h3>Add new note</h3>
+  <form action="sierra.pl" method="POST">
+    <input type="hidden" name="action" value="add_note">
+    <input type="hidden" name="sample_id" value="<!-- TMPL_VAR NAME=SAMPLE_ID -->">
+    <textarea name="note" cols="40" rows="3"></textarea>
+    <p class="center"><input type="submit" value="Add Note"></p>
+  </form>
+  <!-- /TMPL_IF -->
+
+    </div>
+
+
+
+<!-- TMPL_INCLUDE NAME="footer.html" -->

@@ -1,0 +1,40 @@
+    <div id="menu">
+  <ul>
+    <li><a href="<!-- TMPL_VAR NAME=BASE_URL ESCAPE=HTML -->">Sample Summary</a></li>
+    
+    <li><a href="<!-- TMPL_VAR NAME=BASE_URL ESCAPE=HTML -->?action=edit_sample">Add New Sample</a></li>
+    
+    <li><a href="<!-- TMPL_VAR NAME=BASE_URL ESCAPE=HTML -->?action=change_details">Change Details</a></li>
+    
+    <li><a href="<!-- TMPL_VAR NAME=BASE_URL ESCAPE=HTML -->?action=search">Search</a></li>
+
+    <!-- TMPL_IF NAME=PUBLIC_QUEUE -->
+
+    <li><a href="<!-- TMPL_VAR NAME=BASE_URL ESCAPE=HTML -->?action=show_queue">Show Queue</a></li>
+
+    <!-- /TMPL_IF -->
+
+
+    <!-- TMPL_IF NAME=IS_ADMIN -->
+
+    <!-- TMPL_UNLESS NAME=PUBLIC_QUEUE -->
+
+    <li><a href="<!-- TMPL_VAR NAME=BASE_URL ESCAPE=HTML -->?action=show_queue" class="admin">Show Queue</a></li>
+
+    <!-- /TMPL_UNLESS -->
+
+    <li><a href="<!-- TMPL_VAR NAME=BASE_URL ESCAPE=HTML -->?action=new_account" class="admin">New User</a></li>
+
+    <li><a href="<!-- TMPL_VAR NAME=BASE_URL ESCAPE=HTML -->?action=email_users" class="admin">Email Users</a></li>
+
+    <li><a href="<!-- TMPL_VAR NAME=BASE_URL ESCAPE=HTML -->?action=new_flowcell" class="admin">New Flowcell</a></li>
+
+    <li><a href="<!-- TMPL_VAR NAME=BASE_URL ESCAPE=HTML -->?action=configuration" class="admin">Configuration</a></li>
+
+    <li><a href="<!-- TMPL_VAR NAME=BASE_URL ESCAPE=HTML -->?action=reports" class="admin">Reports</a></li>
+
+    <!-- /TMPL_IF -->
+	<li><a href="<!-- TMPL_VAR NAME=BASE_URL ESCAPE=HTML -->?action=logout">Log Out</a></li>
+
+      </ul>
+    </div>

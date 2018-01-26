@@ -1,0 +1,179 @@
+<!-- TMPL_INCLUDE NAME="header.html" -->
+<!-- TMPL_INCLUDE NAME="toolbar.html" -->
+<!-- TMPL_INCLUDE NAME="user_menu.html" -->
+
+    <div id="main">
+  <h2 id="instruments">Instruments</h2>
+
+  <table>
+    <tr>
+      <th>Instrument ID</th>
+      <th>Available</th>
+      <th>Retired</th>
+      <th>Description</th>
+      <th>Run types</th>
+      <th>Edit</th>
+    </tr>
+    <!-- TMPL_IF NAME=INSTRUMENTS -->
+    <!-- TMPL_LOOP NAME=INSTRUMENTS -->
+    <tr>
+      <td><!-- TMPL_VAR NAME=INSTRUMENT_ID ESCAPE=HTML --></td>
+      <td><!-- TMPL_IF NAME=AVAILABLE -->Yes<!-- TMPL_ELSE -->No<!-- /TMPL_IF --></td>
+      <td><!-- TMPL_IF NAME=RETIRED -->Yes<!-- TMPL_ELSE -->No<!-- /TMPL_IF --></td>
+      <td><!-- TMPL_VAR NAME=DESCRIPTION ESCAPE=HTML --></td>
+      <td><!-- TMPL_VAR NAME=RUN_TYPES ESCAPE=HTML --></td>
+      <td><a href="sierra.pl?action=edit_instrument&amp;instrument_id=<!-- TMPL_VAR NAME=INSTRUMENT_ID ESCAPE=HTML -->">Edit</a> </td>
+    </tr>
+    <!-- /TMPL_LOOP -->
+    <!-- TMPL_ELSE -->
+    <tr>
+      <td colspan="6" class="center">No Instruments Currently Registered</td>
+    </tr>
+    <!-- /TMPL_IF -->
+  </table> 
+
+  <form action="sierra.pl" method="GET">
+    <input type="hidden" name="action" value="edit_instrument">
+    <p class="center"><input type="submit" value="Add new instrument"></p>
+  </form>
+ 
+
+  <h2 id="run_types">Run Types</h2>
+
+  <table>
+    <tr>
+      <th>Run type ID</th>
+      <th>Name</th>
+      <th>Lanes</th>
+      <th>Retired</th>
+      <th>Instruments</th>
+      <th>Edit</th>
+    </tr>
+    <!-- TMPL_IF NAME=RUN_TYPES -->
+    <!-- TMPL_LOOP NAME=RUN_TYPES -->
+    <tr>
+      <td><!-- TMPL_VAR NAME=RUN_TYPE_ID ESCAPE=HTML --></td>
+      <td><!-- TMPL_VAR NAME=NAME ESCAPE=HTML--></td>
+      <td><!-- TMPL_VAR NAME=LANES ESCAPE=HTML --></td>
+      <td><!-- TMPL_IF NAME=RETIRED -->Yes<!-- TMPL_ELSE -->No<!-- /TMPL_IF --></td>
+      <td><!-- TMPL_VAR NAME=INSTRUMENTS ESCAPE=HTML --></td>
+      <td><a href="sierra.pl?action=edit_run_type&amp;run_type_id=<!-- TMPL_VAR NAME=RUN_TYPE_ID ESCAPE=HTML -->">Edit</a> </td>
+    </tr>
+    <!-- /TMPL_LOOP -->
+    <!-- TMPL_ELSE -->
+    <tr>
+      <td colspan="6" class="center">No available run types</td>
+    </tr>
+    <!-- /TMPL_IF -->
+  </table> 
+
+  <form action="sierra.pl" method="GET">
+    <input type="hidden" name="action" value="edit_run_type">
+    <p class="center"><input type="submit" value="Add new run type"></p>
+  </form>
+
+  <h2 id="adapter_types">Adapter Types</h2>
+
+  <table>
+    <tr>
+      <th>Adapter type ID</th>
+      <th>Name</th>
+      <th>Retired</th>
+      <th>Edit</th>
+    </tr>
+    <!-- TMPL_IF NAME=ADAPTER_TYPES -->
+    <!-- TMPL_LOOP NAME=ADAPTER_TYPES -->
+    <tr>
+      <td><!-- TMPL_VAR NAME=ADAPTER_TYPE_ID ESCAPE=HTML --></td>
+      <td><!-- TMPL_VAR NAME=NAME ESCAPE=HTML--></td>
+      <td><!-- TMPL_IF NAME=RETIRED -->Yes<!-- TMPL_ELSE -->No<!-- /TMPL_IF --></td>
+      <td><a href="sierra.pl?action=edit_adapter_type&amp;adapter_type_id=<!-- TMPL_VAR NAME=ADAPTER_TYPE_ID ESCAPE=HTML -->">Edit</a> </td>
+    </tr>
+    <!-- /TMPL_LOOP -->
+    <!-- TMPL_ELSE -->
+    <tr>
+      <td colspan="4" class="center">No available adapter types</td>
+    </tr>
+    <!-- /TMPL_IF -->
+  </table> 
+
+  <form action="sierra.pl" method="GET">
+    <input type="hidden" name="action" value="edit_adapter_type">
+    <p class="center"><input type="submit" value="Add new adapter type"></p>
+  </form>
+
+
+
+  <h2 id="sample_types">Sample Types</h2>
+
+  <table>
+    <tr>
+      <th>Sample type ID</th>
+      <th>Name</th>
+      <th>Description</th>
+      <th>Retired</th>
+      <th>Edit</th>
+    </tr>
+    <!-- TMPL_IF NAME=SAMPLE_TYPES -->
+    <!-- TMPL_LOOP NAME=SAMPLE_TYPES -->
+    <tr>
+      <td><!-- TMPL_VAR NAME=SAMPLE_TYPE_ID ESCAPE=HTML --></td>
+      <td><!-- TMPL_VAR NAME=NAME ESCAPE=HTML--></td>
+      <td><!-- TMPL_VAR NAME=DESCRIPTION ESCAPE=HTML --></td>
+      <td><!-- TMPL_IF NAME=RETIRED -->Yes<!-- TMPL_ELSE -->No<!-- /TMPL_IF --></td>
+      <td><a href="sierra.pl?action=edit_sample_type&amp;sample_type_id=<!-- TMPL_VAR NAME=SAMPLE_TYPE_ID ESCAPE=HTML -->">Edit</a> </td>
+    </tr>
+    <!-- /TMPL_LOOP -->
+    <!-- TMPL_ELSE -->
+    <tr>
+      <td colspan="5" class="center">No available sample types</td>
+    </tr>
+    <!-- /TMPL_IF -->
+  </table> 
+
+  <form action="sierra.pl" method="GET">
+    <input type="hidden" name="action" value="edit_sample_type">
+    <p class="center"><input type="submit" value="Add new sample type"></p>
+  </form>
+
+
+  <h2 id="databases">Search Databases</h2>
+
+  <table>
+    <tr>
+      <th>Search Database ID</th>
+      <th>Species</th>
+      <th>Assembly</th>
+      <th>Folder</th>
+      <th>Edit</th>
+    </tr>
+    <!-- TMPL_IF NAME=DATABASES -->
+    <!-- TMPL_LOOP NAME=DATABASES -->
+    <tr>
+      <td><!-- TMPL_VAR NAME=DATABASE_ID ESCAPE=HTML --></td>
+      <td><!-- TMPL_VAR NAME=SPECIES ESCAPE=HTML--></td>
+      <td><!-- TMPL_VAR NAME=ASSEMBLY ESCAPE=HTML --></td>
+      <td><!-- TMPL_VAR NAME=FOLDER ESCAPE=HTML --></td>
+      <td><a href="sierra.pl?action=edit_database&amp;database_id=<!-- TMPL_VAR NAME=DATABASE_ID ESCAPE=HTML -->">Edit</a> </td>
+    </tr>
+    <!-- /TMPL_LOOP -->
+    <!-- TMPL_ELSE -->
+    <tr>
+      <td colspan="5" class="center">No available databases</td>
+    </tr>
+    <!-- /TMPL_IF -->
+  </table> 
+
+  <form action="sierra.pl" method="GET">
+    <input type="hidden" name="action" value="edit_database">
+    <p class="center"><input type="submit" value="Add new database"></p>
+  </form>
+ 
+
+
+
+    </div>
+
+
+
+<!-- TMPL_INCLUDE NAME="footer.html" -->

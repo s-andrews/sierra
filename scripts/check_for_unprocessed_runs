@@ -1,0 +1,309 @@
+#!/usr/bin/perl
+
+##########################################################################
+#                                                                        #
+# Copyright 2013-14, Simon Andrews (simon.andrews@babraham.ac.uk)        #
+#                                                                        #
+# This file is part of Sierra.                                           #
+#                                                                        #
+# Sierra is free software: you can redistribute it and/or modify         #
+# it under the terms of the GNU General Public License as published by   #
+# the Free Software Foundation, either version 3 of the License, or      #
+# (at your option) any later version.                                    #
+#                                                                        #
+# Sierra is distributed in the hope that it will be useful,              #
+# but WITHOUT ANY WARRANTY; without even the implied warranty of         #
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          #
+# GNU General Public License for more details.                           #
+#                                                                        #
+# You should have received a copy of the GNU General Public License      #
+# along with Sierra.  If not, see <http://www.gnu.org/licenses/>.        #
+##########################################################################
+
+use warnings;
+use strict;
+use DBI;
+use FindBin qw($Bin);
+use lib "$Bin/../source";
+use Sierra::Constants;
+use Sierra::IlluminaRun;
+use Getopt::Long;
+use File::Copy;
+use HTML::Template;
+use Net::SMTP;
+
+my $CHECK_DATA_VERSION = "0.3";
+
+chdir ("$Bin/../templates") or die "Can't move to templates directory: $!";
+
+# Collect the options the user has supplied.
+
+my $interval;
+my $quiet;
+my $help;
+my $version;
+my @working_folders;
+
+my $result = GetOptions("interval=i" => \$interval,
+			"quiet"    => \$quiet,
+			"help"     => \$help,
+			"version"  => \$version,
+			"working=s"  => \@working_folders
+		       );
+die "Failed to process options" unless ($result);
+
+if ($help) {
+  print while (<DATA>);
+  exit;
+}
+
+if ($version) {
+  print "check_for_unprocessed_runs version $CHECK_DATA_VERSION from Sierra $Sierra::Constants::SIERRA_VERSION\n";
+  exit;
+}
+
+if (@working_folders) {
+    foreach my $working_folder (@working_folders) {
+	unless (-e $working_folder) {
+	    die "Working folder '$working_folder' doesn't exist\n";
+	}
+    }
+}
+
+# We set a default interval of 60 days if they've not supplied one
+$interval = 60 unless ($interval);
+
+
+# This is going to be the list of run folders
+# which look like they're unprocessed
+
+my @unprocessed_runs;
+
+
+# Now we can start going through the runs to look for anything new
+
+# We can now try to connect to the database
+my $dbh = DBI->connect("DBI:mysql:database=$Sierra::Constants::DB_NAME;host=$Sierra::Constants::DB_SERVER",$Sierra::Constants::DB_USERNAME,$Sierra::Constants::DB_PASSWORD,{RaiseError=>0,AutoCommit=>1});
+
+unless ($dbh) {
+  die ("Couldn't connect to Sierra database: ".$DBI::errstr);
+}
+
+# Go through the list of runs in the last interval time
+
+my $all_runs_sth = $dbh->prepare("SELECT id,run_folder_name FROM run WHERE date >= NOW()-INTERVAL ? DAY");
+
+$all_runs_sth->execute($interval) or die "Failed to get list of runs: ".$dbh->errstr()."\n";
+
+while (my ($run_id,$folder) = $all_runs_sth->fetchrow_array()) {
+
+  unless ($quiet) {
+    warn "Checking for updates in $folder\n";
+  }
+
+  my ($status,$path) = check_run_status($run_id,$folder);
+  if ($status) {
+
+      # We'll get a list of the samples on these runs so we can include
+      # these in the report
+
+      my $samples = get_sample_list($run_id);
+
+      push @unprocessed_runs, {STATUS => $status, FOLDER => $path, SAMPLES => $samples};
+  }
+
+}
+
+@unprocessed_runs = sort {$a->{STATUS} cmp $b->{STATUS}} @unprocessed_runs;
+
+
+# Now we can go ahead and send the emails
+
+my $email_template = HTML::Template -> new (filename => 'unprocessed_runs_email.txt');
+
+
+$email_template->param(RUNS => \@unprocessed_runs);
+
+send_email("Unprocessed Sierra Runs",$email_template->output,(@Sierra::Constants::NOTIFY_ABOUT_RUNS));
+
+
+sub get_sample_list {
+    my ($run_id) = @_;
+
+    my $list_samples_sth = $dbh->prepare("select lane.lane_number, person.first_name, person.last_name, sample.users_sample_name, sample.sample_type_id from run, lane, sample,person where run.id=? and lane.flowcell_id = run.flowcell_id and lane.sample_id=sample.id and sample.person_id=person.id ORDER BY lane.lane_number");
+
+    $list_samples_sth -> execute($run_id) or die $dbh->errstr();
+
+
+    my $output;
+
+    while (my ($lane,$first,$last,$sample_name,$type_id) = $list_samples_sth->fetchrow_array()) {
+
+	my $type = "Unknown";
+	if ($type_id) {
+	    ($type) = $dbh->selectrow_array("SELECT name from sample_type where id=?",undef,($type_id));
+	}
+
+	$output .= "\n" if ($output);
+	$output .= "     ";
+	$output .= join("\t",($lane,"$first $last",$sample_name,$type));
+    }
+
+    return $output;
+
+
+}
+
+sub send_email {
+
+  my ($subject,$message,@recipiants) = @_;
+
+  my $smtp = Net::SMTP -> new(Host => $Sierra::Constants::SMTP_SERVER,
+			      Timeout => 30,
+			      Debug => 0);
+
+  unless ($smtp) {
+    die ("Failed to connect to $Sierra::Constants::SMTP_SERVER");
+  }
+
+
+  if ($Sierra::Constants::SMTP_USERNAME) {
+    $smtp->auth($Sierra::Constants::SMTP_USERNAME,$Sierra::Constants::SMTP_PASSWORD) or die "Failed to authenticate with SMTP server";
+  }
+
+  $smtp->mail("Sierra LIMS System <$Sierra::Constants::MAILS_FROM_ADDRESS>") or die "Invalid from address $Sierra::Constants::MAILS_FROM_ADDRESS";
+
+  $smtp->to(@recipiants) or die "Invalid email address in @recipiants";
+
+  $smtp->data();
+
+  foreach my $recipiant (@recipiants) {
+    $smtp->datasend("To: $recipiant\n");
+  }
+
+  $smtp->datasend("From: Sierra LIMS System <$Sierra::Constants::MAILS_FROM_ADDRESS>\n");
+  $smtp->datasend("Subject: $subject\n");
+  $smtp->datasend("\n"); # End of headers
+  $smtp->datasend($message);
+  $smtp->dataend();
+  $smtp->quit();
+
+  return 1;
+
+}
+
+
+
+
+sub check_run_status {
+
+  # Checks the status of a run.  If it's complete and there
+  # are results it will return a false value.  True values
+  # will be "Running", "Unprocessed" or "Unanalysed"
+
+  my ($run_id,$folder) = @_;
+
+  my $run_obj = Sierra::IlluminaRun->new($folder);
+
+  die "Couldn't make run object from '$folder'\n" unless ($run_obj);
+
+  # Check if it's finished
+
+  unless ($run_obj->get_run_folder()) {
+
+    # It's not present in the standard data directories, but might be
+    # in the working folder.
+      foreach my $working_folder (@working_folders) {
+	  if ($working_folder) {
+	      if (-e "$working_folder/$folder/Unaligned") {
+		  return 0;
+	      }
+	      elsif (-e "$working_folder/$folder/RTAComplete.txt") {
+		  return ("Unprocessed","$working_folder/$folder");
+	      }
+	      elsif (-e "$working_folder/$folder") {
+		  return ("Running","$working_folder/$folder");
+	      }
+	  }
+      }
+
+    return ("Missing",$folder);
+  }
+
+  my @results_folders = $run_obj->get_results_folders();
+
+  if (@results_folders) {
+      # If there is an unaligned folder, then there should also be an
+      # aligned folder, otherwise it's not been processed
+
+      unless (-e $run_obj->get_run_folder()."/unanalysed.flag") {
+
+	  if (-e $run_obj->get_run_folder()."/Unaligned") {
+	      # It's not enough to check that the aligned folder is there (it's 
+	      # auto created further up the chain).  We need to see if we can
+	      # actually see any files in there.
+	      my ($some_result) = glob($run_obj->get_run_folder()."/Aligned/Project*/Sample_lane*/*");
+	      unless ($some_result) {
+		  # It's not been analysed
+		  return ("Unanalysed",$run_obj->get_run_folder());
+	      }
+	  }
+      }
+
+      return(0);
+  }
+
+  elsif (-e $run_obj->get_run_folder()."/RTAComplete.txt") {
+    # It's still running
+    return ("Unprocessed",$run_obj->get_run_folder());
+
+  }
+
+
+  return ("Missing",$folder);
+
+}
+
+
+__DATA__
+
+check_for_new_results
+
+NAME
+
+  check_for_unprocessed_runs - Notify admins of pending runs
+
+SYNOPSIS
+
+  check_for_unprocessed_runs [--interval 60]
+
+DESCRIPTION
+
+  This script goes through all recent runs registered in Sierra
+  and checks whether they appear to have a complete dataset 
+  associated with them.
+
+  Options which can be applied are:
+
+  -i --interval  Say how recently (in days) a run must have
+                 been registered to include it in the report.
+
+  -q --quiet     Supresses all progress information and only
+                 produces output in the event of an error.
+
+  -h --help      Print out help instructions and exit.
+
+  -v --version   Print the program version and exit.
+
+AUTHOR
+
+  Written by Simon Andrews (simon.andrews@babraham.ac.uk)
+
+REPORTING BUGS
+
+  Please report any bugs to our bugzilla instance at:
+
+  www.bioinformatics.babraham.ac.uk/bugzilla/
+
+  Bugs should be filed under the Sierra product.
+

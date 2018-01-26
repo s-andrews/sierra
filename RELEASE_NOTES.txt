@@ -1,0 +1,87 @@
+Release notes for Sierra v0.3
+-----------------------------
+
+Sierra v0.3 is a major release which adds a lot of functionality
+to the system.  Major changes are:
+
+- Added support for barcoding within samples
+
+- Greatly expanded the range of recognised file types
+
+- Added support for storing budget information and pulling this from
+  a separate database
+
+- Added fields to record the adapter type with each sample
+
+- Added a reporting screen to the admin view
+
+- Added an option to make the sample queue publicly visible
+
+- Added support for authenticated SMTP for email delivery
+
+- Aded more email notification options
+
+- Added interactive data extraction from files to present useful
+  information in the lane view
+
+- Added support for a single instrument being able to have runs
+  containing different numbers of lanes.
+
+- Removed the user option to set a number of lanes to run since it
+  caused too many problems.  Admins can still set this.
+
+
+
+Release notes for Sierra v0.2
+-----------------------------
+
+Sierra v0.2 adds support for the new folder layout provided in Casava
+v1.8. The program will look for files in the Aligned and Unaligned
+folders underneath the main run folder. In order to be able to find
+the files associated with a specific lane Sierra requires that the
+standard naming scheme for projects and samples is used, rather than
+a custom name from a user-defined sample sheet.  Basically if you 
+process your runs without specifying a sample sheet you should be OK.
+
+In addition the other major addition in this release is a new script 
+which allows you to backup the important parts of your data. The
+script "backup_sierra_data" can be found in the scripts directory and
+will pull out all of the files shown to the user in the Sierra UI and 
+copy them to a location you specify.  This should be useful either to
+back up your data, or to filter a full run folder to extract only the
+files you need to keep Sierra running.
+
+In addition we have fixed some other problems which were reported in
+the initial release.
+
+There are no database updates in this release so upgrading from v0.1 
+should simply be a case of overwriting the existing installation with
+the new files from the v0.2 release.  Alternatively you can unpack the
+new file separately and then copy over your sierra.conf file into the
+new structure.
+
+
+Release notes for Sierra v0.1
+-----------------------------
+
+This is the first public release of Sierra, although the system has been
+acting as the primary LIMS for the Babraham Institute sequencing facility
+for around 6 months, so the code has received some stress testing.
+
+This release should provide a fully functional sample tracking environment,
+although in its current state it is still tied to some assumptions about 
+Illumina sequencers (8 lanes per flowcell etc).  The results parsing is
+also only implemented for Illumina run folders and has been tested up to
+SCS2.5 (OLB 1.8).  With the changes due in OLB 1.9 it's likely that some
+updates to the parsing rules will be necessary in order to correctly 
+identify the files associated with each lane - however these will be able
+to be applied retrospectively, and won't affect the sample tracking parts
+of Sierra.
+
+If you find any problems with Sierra then please report them either into 
+our bug tracking system at:
+
+www.bioinformartics.bbsrc.ac.uk/bugzilla/
+
+...or directly to simon.andrews@babraham.ac.uk
+

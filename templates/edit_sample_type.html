@@ -1,0 +1,46 @@
+<!-- TMPL_INCLUDE NAME="header.html" -->
+<!-- TMPL_INCLUDE NAME="toolbar.html" -->
+<!-- TMPL_INCLUDE NAME="user_menu.html" -->
+
+    <div id="main">
+  <!-- TMPL_IF NAME=SAMPLE_TYPE_ID -->
+  <h2>Edit Sample Type</h2>
+  <!-- TMPL_ELSE -->
+  <h2>Create new Sample Type</h2>
+  <!-- /TMPL_IF -->
+
+  <form action="sierra.pl" method="POST">
+    <input type="hidden" name="action" value="finish_edit_sample_type">
+    <!-- TMPL_IF NAME=SAMPLE_TYPE_ID -->
+    <input type="hidden" name="sample_type_id" value="<!-- TMPL_VAR NAME=SAMPLE_TYPE_ID -->">
+    <!-- /TMPL_IF -->
+  <table>
+    <tr>
+      <th>Name</th>
+      <td><input type="text" name="name" value="<!-- TMPL_VAR NAME=NAME ESCAPE=HTML -->"></td>
+    </tr>
+    <tr>
+      <th>Description</th>
+      <td><input type="text" name="description" value="<!-- TMPL_VAR NAME=DESCRIPTION ESCAPE=HTML -->"></td>
+    </tr>
+    <!-- TMPL_IF NAME=SAMPLE_TYPE_ID -->
+    <tr>
+      <th>Retired</th>
+      <td>
+	<input type="checkbox" name="retired" <!-- TMPL_IF NAME=RETIRED -->checked<!-- /TMPL_IF -->>
+      </td>
+    </tr>
+    <!-- /TMPL_IF -->
+
+  </table>
+  <p class="center">
+    <!-- TMPL_IF NAME=SAMPLE_TYPE_ID -->
+  <input type="submit" value="Submit changes">
+  <!-- TMPL_ELSE -->
+  <input type="submit" value="Create Sample Type">
+  <!-- /TMPL_IF -->
+</p>
+  </form>
+    </div>
+
+<!-- TMPL_INCLUDE NAME="footer.html" -->

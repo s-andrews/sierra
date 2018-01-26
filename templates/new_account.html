@@ -1,0 +1,59 @@
+<!-- TMPL_INCLUDE NAME="header.html" -->
+
+<!-- TMPL_IF NAME=IS_ADMIN -->
+<!-- TMPL_INCLUDE NAME="user_menu.html" -->
+<!-- TMPL_ELSE -->
+<!-- TMPL_INCLUDE NAME="login_menu.html" -->
+<!-- /TMPL_IF -->
+
+    <div id="main">
+
+  <h2 class="center">Create New Account</h2>
+  
+  <form action="sierra.pl" method="POST">
+
+    <input type="hidden" name="action" value="finish_new_account">
+
+  <table>
+    <tr>
+      <th>Email*</th>
+      <td><input type="text" name="email" size="30"></td>
+    </tr>
+    <tr>
+      <th>First Name*</th>
+      <td><input type="text" name="first_name" size="30"></td>
+    </tr>
+    <tr>
+      <th>Last Name*</th>
+      <td><input type="text" name="last_name" size="30"></td>
+    </tr>
+    <tr>
+      <th>Phone</th>
+      <td><input type="text" name="phone" size="30"></td>
+    </tr>
+    <!-- TMPL_IF NAME=IS_ADMIN -->
+    <tr>
+      <th>Make Administrator</th>
+      <td><input type="checkbox" name="make_admin"></td>
+    </tr>
+    <!-- TMPL_ELSE -->
+    <tr>
+      <th>Password*</th>
+      <td><input type="password" name="password" size="30"></td>
+    </tr>
+    <tr>
+      <th>Re-type Password*</th>
+      <td><input type="password" name="password2" size="30"></td>
+    </tr>
+    <!-- /TMPL_IF -->
+  </table>  
+  <p class="center">
+  <input type="submit" value="Create Account">
+      </p>
+
+  </form>
+
+    </div>
+
+
+<!-- TMPL_INCLUDE NAME="footer.html" -->

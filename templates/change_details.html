@@ -1,0 +1,158 @@
+<!-- TMPL_INCLUDE NAME="header.html" -->
+<!-- TMPL_INCLUDE NAME="toolbar.html" -->
+<!-- TMPL_INCLUDE NAME="user_menu.html" -->
+
+    <div id="main">
+
+  <h2 class="center">Update Details <!-- TMPL_IF NAME=FORCE_PERSON_ID -->for <!-- TMPL_VAR NAME=DETAILS_FIRST_NAME ESCAPE=HTML --> <!-- TMPL_VAR NAME=DETAILS_LAST_NAME ESCAPE=HTML --><!-- /TMPL_IF --></h2>
+  
+  <form action="sierra.pl" method="POST">
+
+    <input type="hidden" name="action" value="finish_change_details">
+    <!-- TMPL_IF NAME=FORCE_PERSON_ID -->
+    <input type="hidden" name="person_id" value="<!-- TMPL_VAR NAME=FORCE_PERSON_ID ESCAPE=HTML -->">
+    <!-- /TMPL_IF --> 
+
+
+  <table>
+    <tr>
+      <th>Email</th>
+      <td>
+	<!-- TMPL_IF NAME=FORCE_PERSON_ID -->
+	<input type="text" name="email" value="<!-- TMPL_VAR NAME=DETAILS_EMAIL ESCAPE=HTML -->">
+	<!-- TMPL_ELSE -->
+	<!-- TMPL_VAR NAME=DETAILS_EMAIL ESCAPE=HTML -->
+	<!-- /TMPL_IF -->
+      </td>
+    </tr>
+    <tr>
+      <th>First Name</th>
+      <td><input type="text" name="first_name" size="30" value="<!-- TMPL_VAR NAME=DETAILS_FIRST_NAME ESCAPE=HTML -->"></td>
+    </tr>
+    <tr>
+      <th>Last Name</th>
+      <td><input type="text" name="last_name" size="30" value="<!-- TMPL_VAR NAME=DETAILS_LAST_NAME ESCAPE=HTML -->"></td>
+    </tr>
+    <tr>
+      <th>Phone</th>
+      <td><input type="text" name="phone" size="30" value="<!-- TMPL_VAR NAME=PHONE ESCAPE=HTML -->"></td>
+    </tr>
+    <tr>
+      <th>Is Anonymous</th>
+      <td>
+	<input type="checkbox" name="anonymous" <!-- TMPL_IF NAME=DETAILS_ANONYMOUS -->checked<!-- /TMPL_IF -->>
+      </td>
+    </tr>
+    <tr>
+      <th>Is Admin</th>
+      <td>
+	<!-- TMPL_IF NAME=FORCE_PERSON_ID -->
+	<input type="checkbox" name="is_admin" <!-- TMPL_IF NAME=DETAILS_IS_ADMIN -->checked<!-- /TMPL_IF -->>
+	<!-- TMPL_ELSE -->
+	<!-- TMPL_IF NAME=IS_ADMIN -->Yes<!-- TMPL_ELSE -->No<!-- /TMPL_IF -->
+	<!-- /TMPL_IF -->
+      </td>
+    </tr>
+    
+  </table>  
+  <p class="center">
+  <input type="submit" name="submit" value="Update Details">
+      </p>
+
+  </form>
+
+  <!-- TMPL_UNLESS NAME=FORCE_PERSON_ID -->
+  <h2 class="center">Change Password</h2>
+
+  <form action="sierra.pl" method="POST">
+
+    <input type="hidden" name="action" value="finish_change_details">
+
+  <table>
+    <tr>
+      <th>Old Password</th>
+      <td><input type="password" name="old_password" size="30"></td>
+    </tr>
+    <tr>
+      <th>New Password</th>
+      <td><input type="password" name="password" size="30"></td>
+    </tr>
+    <tr>
+      <th>Retype New Password</th>
+      <td><input type="password" name="password2" size="30"></td>
+    </tr>
+  </table>  
+  <p class="center">
+  <input type="submit" name="submit" value="Change Password">
+      </p>
+
+  </form>
+  <!-- /TMPL_UNLESS -->
+
+
+
+
+  <h2 class="center">Permissions</h2>
+
+  <!-- TMPL_IF NAME=OTHER_PERMISSIONS -->
+  <p class="center">
+    <!-- TMPL_VAR NAME=DETAILS_FIRST_NAME ESCAPE=HTML --> <!-- TMPL_VAR NAME=DETAILS_LAST_NAME ESCAPE=HTML -->
+    has permission to view samples belonging to
+  </p>
+
+  <table>
+    <tr>
+      <th>Name</th>
+      <th>Email</th>
+    </tr>
+    <!-- TMPL_LOOP NAME=OTHER_PERMISSIONS -->
+    <tr>
+      <td><!-- TMPL_VAR NAME=NAME ESCAPE=HTML --></td>
+      <td><a href="mailto:<!-- TMPL_VAR NAME=EMAIL ESCAPE=HTML -->"><!-- TMPL_VAR NAME=EMAIL ESCAPE=HTML --></a></td>
+    </tr>
+    <!-- /TMPL_LOOP -->
+  </table>
+  <!-- /TMPL_IF -->
+
+
+  <p class="center">The following people have permission to view samples belonging to
+    <!-- TMPL_VAR NAME=DETAILS_FIRST_NAME ESCAPE=HTML --> <!-- TMPL_VAR NAME=DETAILS_LAST_NAME ESCAPE=HTML -->
+  </p>
+
+  <table>
+    <tr>
+      <th>Name</th>
+      <th>Email</th>
+      <th>Remove</th>
+    </tr>
+    <!-- TMPL_IF NAME=PERMISSIONS -->
+    <!-- TMPL_LOOP NAME=PERMISSIONS -->
+    <tr>
+      <td><!-- TMPL_VAR NAME=NAME ESCAPE=HTML --></td>
+      <td><a href="mailto:<!-- TMPL_VAR NAME=EMAIL ESCAPE=HTML -->"><!-- TMPL_VAR NAME=EMAIL ESCAPE=HTML --></a></td>
+      <td><a href="sierra.pl?action=remove_permission&amp;permission_id=<!-- TMPL_VAR NAME=PERMISSION_ID ESCAPE=HTML -->">Remove</a>
+    </tr>
+    <!-- /TMPL_LOOP -->
+    <!-- TMPL_ELSE -->
+    <tr>
+      <td colspan="3" class="center">No permissions</td>
+    </tr>
+    <!-- /TMPL_IF -->
+  </table>
+
+  <form method="GET" action="sierra.pl">
+    <input type="hidden" name="action" value="add_permission">
+    <!-- TMPL_IF NAME=FORCE_PERSON_ID -->
+    <input type="hidden" name="person_id" value="<!-- TMPL_VAR NAME=FORCE_PERSON_ID ESCAPE=HTML -->">
+    <!-- /TMPL_IF -->
+
+    
+    <p class="center">Allow access to email address <input type="text" size="30" name="email"><input type="submit" value="Add Permission"></p>
+    
+  </form>
+
+
+    </div>
+
+
+<!-- TMPL_INCLUDE NAME="footer.html" -->

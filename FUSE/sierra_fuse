@@ -1,0 +1,723 @@
+#!/usr/bin/perl
+use warnings;
+use strict;
+use Fuse "fuse_get_context";
+use DBI;
+use IO::File;
+use POSIX qw(ENOTDIR ENOENT ENOSYS EEXIST EPERM O_RDONLY O_RDWR O_APPEND O_CREAT setsid);
+use Fcntl qw(S_ISBLK S_ISCHR S_ISFIFO SEEK_SET S_ISREG S_ISFIFO S_IMODE S_ISCHR S_ISBLK S_ISSOCK);
+use FindBin qw($Bin);
+
+##########################################################################
+#                                                                        #
+# Copyright 2015, Simon Andrews (simon.andrews@babraham.ac.uk)           #
+#                                                                        #
+# This file is part of Sierra.                                           #
+#                                                                        #
+# Sierra is free software: you can redistribute it and/or modify         #
+# it under the terms of the GNU General Public License as published by   #
+# the Free Software Foundation, either version 3 of the License, or      #
+# (at your option) any later version.                                    #
+#                                                                        #
+# Sierra is distributed in the hope that it will be useful,              #
+# but WITHOUT ANY WARRANTY; without even the implied warranty of         #
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          #
+# GNU General Public License for more details.                           #
+#                                                                        #
+# You should have received a copy of the GNU General Public License      #
+# along with Sierra.  If not, see <http://www.gnu.org/licenses/>.        #
+##########################################################################
+
+#############################################################################
+# This script provides a FUSE filesystem driver which can be used to directly
+# expose sierra data on a unix filesystem.
+#
+# The script must be run as root, and beyond the configration settings 
+# below, takes no command line arguments.  It will create a virtual 
+# filesystem at the specified mount point under which users will be able
+# to see their own samples, and any other samples to which they have 
+# been given permission within Sierra.
+#
+# This system requires that the main run folder is mounted on the system
+# somewhere visible to the super-user, but not to normal users.  It also
+# requires a file to be created to map between unix uids and the internal
+# person_id numbers within sierra.
+#############################################################################
+
+#################
+# Configuration #
+#################
+
+# Do we want lots of messages about what we're doing?  You can use this when
+# first testing the system, but this should be turned off in production unless
+# you want very big log files.
+
+my $debug = 0;
+
+
+# Where in the filesystem should this mount be visible?  This
+# directory must already exist.  The mount will fail if it 
+# doesn't.
+my $mountpoint = "/bi/sequencing";
+
+
+# Where is the actual data directory which exposes the full list
+# of run folders?
+my $data_dir = "/bi/seqfac/seqfac";
+
+
+# What file name do we give to the file which unregistered users
+# see?
+my $unregistered_file_name = "README_UNREGISTERED_USER.txt";
+
+
+# How many seconds before we stat the uid mapping config file to 
+# see if we need to reload it.
+my $check_interval = 10; 
+
+# Where is the uid config file stored
+my $uid_mapping_file = "$Bin/sierra_id_map.txt";
+
+#########################
+# END OF CONFIGURATION  #
+# DON'T EDIT BELOW HERE #
+#########################
+
+# Connect to the sierra database, since this is where we're going to
+# get our permissions from
+
+#### TODO: Don't hard code this !!!
+
+my $dbh = DBI->connect("DBI:mysql:database=sierra;host=bilin2.babraham.ac.uk:port=3306",'sierrauser','',{RaiseError=>0,AutoCommit=>1,mysql_auto_reconnect => 1}) or
+  die ("Couldn't connect to Sierra database: ".$DBI::errstr);
+
+
+##############################
+# Database statement handles #
+##############################
+
+my $list_samples_sth = $dbh -> prepare("SELECT sample.id,sample.users_sample_name FROM sample,person_permission WHERE person_permission.permission_person_id=? AND person_permission.owner_person_id=sample.person_id");
+
+my $get_timestamp_for_sample_sth = $dbh -> prepare("SELECT UNIX_TIMESTAMP(submitted_date) FROM sample WHERE id=?");
+
+my $list_lanes_sth = $dbh -> prepare("SELECT lane.id,sample.users_sample_name FROM sample,person_permission,lane WHERE person_permission.permission_person_id=? AND person_permission.owner_person_id=sample.person_id AND sample.id=? AND lane.sample_id=sample.id"); 
+
+my $get_timestamp_for_lane_sth = $dbh -> prepare("SELECT UNIX_TIMESTAMP(run.date) FROM lane,run WHERE lane.id=? AND run.flowcell_id=lane.flowcell_id");
+
+my $get_run_folder_for_lane_sth = $dbh->prepare("SELECT lane.lane_number,run.run_folder_name FROM lane,run WHERE lane.id=? AND run.flowcell_id=lane.flowcell_id");
+
+my $get_permission_for_sample_sth = $dbh->prepare("SELECT person_permission.id FROM sample,person_permission WHERE sample.id=? AND sample.person_id=person_permission.owner_person_id AND person_permission.permission_person_id=?");
+
+my $get_permission_for_lane_sth = $dbh->prepare("SELECT person_permission.id FROM lane,sample,person_permission WHERE lane.id=? AND lane.sample_id=? AND sample.id=lane.sample_id AND sample.person_id=person_permission.owner_person_id AND person_permission.permission_person_id=?");
+
+sub getdir {
+
+		my ($base) = @_;
+
+		$dbh->ping(); # Needed to force a reconnect if the database handle has gone stale
+
+		warn "Listing contents of '$base'\n" if ($debug);
+
+		my $uid = fuse_get_context()->{'uid'};
+
+		my $sierra_id = get_sierra_id($uid);
+
+		unless (defined $sierra_id) {
+				warn "UID $uid is not in the UID map\n" if ($debug);
+				return ($unregistered_file_name,0);
+		}
+
+		if ($base eq '/') {
+				# We're listing the set of samples they are allowed to view as directories
+
+				# Get the list of samples they can see
+				my @samples;
+
+				$list_samples_sth -> execute($sierra_id) or do {
+						warn "Can't list samples for $uid = $sierra_id: $dbh->errstr()";
+						return (-1);
+				};
+
+				while (my ($sample_id,$sample_name) = $list_samples_sth -> fetchrow_array()) {
+
+						$sample_name =~ s/[^a-z,A-Z,0-9,\-\+\.]+/_/g;
+						$sample_name =~ s/_+$//;
+						push @samples,"Sample_${sample_id}_${sample_name}";
+				}
+
+				push @samples,0; # To say that this worked
+
+				return @samples;
+		}
+
+		elsif ($base =~ /^\/Sample_(\d+)[^\/]*$/) {
+				# We're listing a sample folder
+				my $sample_id=$1;
+
+				# We need to find the lanes for this sample and check that
+				# we are allowed to list them.
+
+				my @lanes;
+
+				$list_lanes_sth -> execute($sierra_id,$sample_id) or do {
+						warn "Can't list lanes for $uid = $sierra_id and sample_id = $sample_id: $dbh->errstr()";
+						return (-1);
+				};
+
+				while (my ($lane_id,$sample_name) = $list_lanes_sth -> fetchrow_array()) {
+						$sample_name =~ s/[^a-z,A-Z,0-9,\-\+\.]+/_/g;
+						$sample_name =~ s/_+$//;
+						push @lanes,"Lane_${lane_id}_${sample_name}";
+				}
+
+				push @lanes,0; # To say that this worked
+
+				return @lanes;
+		}
+
+		elsif ($base =~ /^\/Sample_\d+[^\/]*\/Lane_(\d+)[^\/]*$/) {
+				# We're listing a lane folder
+				return ("Unaligned","Aligned",0);
+		}
+
+		elsif ($base =~ /^\/Sample_\d+[^\/]*\/Lane_(\d+)[^\/]*\/(Aligned|Unaligned)$/) {
+				# We're listing an aligned/unaligned folder
+
+				my $lane_id=$1;
+				my $align_type=$2;
+
+				# First we need to get the run folder name and flowcell lane number
+				# for this lane.
+
+				$get_run_folder_for_lane_sth -> execute($lane_id) or do {
+						warn "Couldn't get run folder name for lane $lane_id: $dbh->errstr() \n";
+						return(0);
+				};
+				
+				my ($flowcell_lane,$run_folder) = $get_run_folder_for_lane_sth->fetchrow_array();
+
+				unless ($run_folder) {
+						warn "No run folder found for lane $lane_id\n";
+						return (0);
+				}
+
+				# Now we can try to find the correct folder in the data directory
+
+				my ($data_folder) = glob("${data_dir}/${run_folder}/${align_type}/Project*/Sample_lane${flowcell_lane}");
+
+				unless ($data_folder) {
+						warn "Couldn't find data folder for lane $lane_id in position $flowcell_lane of $run_folder";
+						return (0);
+				}
+
+				# Now we can list the files in there
+
+				my @paths = glob("$data_folder/*_L00{$flowcell_lane}_*");
+
+				my @files;
+				foreach my $path (@paths) {
+						next if (-d $path);
+					  $path =~ s/^\Q$data_folder\/\Q//;
+						push @files,$path;
+				}
+
+				push @files,0;
+
+
+				return @files;
+
+		}
+
+
+		warn "Unknown type of file $base\n";
+    return -ENOENT();
+}
+
+{
+
+		# To cut down on the number of database queries we have to make
+		# we're going to keep a cache of the timestamps for different 
+		# samples and lanes so we don't repeatedly look them up.
+		# 
+		# We'll clear the cache every 24h just in case there is a change
+		# in the back end database, and to stop things getting out of hand.
+
+		my %sample_timestamp_cache;
+		my %lane_timestamp_cache;
+
+		my $timestamp_refresh_time;
+
+		sub getattr {
+
+				my ($file) = @_;
+
+				warn "Getting context for $file\n" if ($debug);
+
+				# Check if we need to flush the caches
+				$timestamp_refresh_time = time() unless (defined $timestamp_refresh_time);
+
+				if ($timestamp_refresh_time - time() > 86400) {
+						# 86400 = 60*60*24 = 1 day
+						%sample_timestamp_cache = ();
+						%lane_timestamp_cache = ();
+				}
+
+
+				my $context = fuse_get_context();
+
+				my @default = (0, 0, 0040700, 1, $context->{'uid'}, $context->{'gid'}, 0, 0, 0, 0, 0, 4096, 0);
+
+				if ($file eq '/') {
+						return @default;
+				}
+
+				elsif ($file =~ /^\/Sample_(\d+)[^\/]*$/) {
+						# We're listing a sample folder
+						my $sample_id=$1;
+
+						# Check that this person has permission to look at this sample
+						unless (validate_user_permission($context->{'uid'},$sample_id)){
+								return -ENOENT();
+						}
+
+						my $timestamp;
+						# Check to see if this is in the cache already
+						if (exists $sample_timestamp_cache{$sample_id}) {
+								$timestamp = $sample_timestamp_cache{$sample_id};
+						}
+						else {
+								# We have to fetch it from the database
+								$dbh->ping(); # Needed to force a reconnect if the database handle has gone stale
+
+								$get_timestamp_for_sample_sth -> execute($sample_id) or do {
+										warn "Failed to run get_timestamp_for_sample_sth for sample $sample_id: $dbh->errstr()\n";
+										return @default;
+								};
+						
+								($timestamp) = $get_timestamp_for_sample_sth->fetchrow_array();
+
+								warn "Retrieved timestamp $timestamp for sample $sample_id\n" if ($debug);
+								
+								# Add this to the cache
+								$sample_timestamp_cache{$sample_id} = $timestamp;
+						}
+
+						$default[8] = $timestamp;
+						$default[9] = $timestamp;
+
+				}
+
+				elsif ($file =~ /^\/Sample_(\d+)[^\/]*\/Lane_(\d+)[^\/]*$/  or $file =~ /^\/Sample_(\d+)[^\/]*\/Lane_(\d+)[^\/]*\/(Una|A)ligned$/) {
+						# We're listing a lane folder, or an Aligned/Unaligned folder
+						# which get the sample properties as the lane
+
+						my $sample_id=$1;
+						my $lane_id=$2;
+
+						warn "Lane id is $lane_id\n" if ($debug);
+
+						# Check that this person has permission to look at this sample
+						unless (validate_user_permission($context->{'uid'},$sample_id,$lane_id)){
+								return -ENOENT();
+						}
+
+						my $timestamp;
+						# Check to see if this is in the cache already
+						if (exists $lane_timestamp_cache{$lane_id}) {
+								$timestamp = $lane_timestamp_cache{$lane_id};
+						}
+						else {
+								# We have to fetch it from the database
+
+								$dbh->ping(); # Needed to force a reconnect if the database handle has gone stale
+
+								$get_timestamp_for_lane_sth -> execute($lane_id) or do {
+										warn "Failed to run get_timestamp_for_lane_sth for lane $lane_id: $dbh->errstr()\n";
+										return @default;
+								};
+
+								($timestamp) = $get_timestamp_for_lane_sth->fetchrow_array();
+
+								warn "Retrieved timestamp $timestamp for lane $lane_id\n" if ($debug);
+
+								unless ($timestamp) {
+										warn "Failed to get timestamp for lane $lane_id";
+										$timestamp = time();
+								}
+
+								# Add it to the cache
+								$lane_timestamp_cache{$lane_id} = $timestamp;
+						}
+
+						$default[8] = $timestamp;
+						$default[9] = $timestamp;
+
+				}
+				
+				elsif ($file =~ /^\/Sample_(\d+)[^\/]*\/Lane_(\d+)[^\/]*\/(Aligned|Unaligned)\/([^\/]+)$/) {
+
+						my $sample_id = $1;
+						my $lane_id = $2;
+
+						# Check that this person has permission to look at this sample
+						unless (validate_user_permission($context->{'uid'},$sample_id,$lane_id)){
+								return -ENOENT();
+						}
+
+						# We're looking at a real data file
+						my $real_path = convert_path($file);
+
+						return @default unless ($real_path);
+
+						my @stats = lstat($real_path);
+
+						$stats[4] = $context->{'uid'};
+						$stats[5] = $context->{'gid'};
+
+						return @stats;
+				}
+				elsif ($file eq "/$unregistered_file_name") {
+						@default = lstat("$Bin/unregistered_user.txt");
+						$default[2] = 33060;
+				}
+
+				else {
+						warn "File '$file' didn't match any of the getattr options";
+						return -ENOENT();
+				}
+
+				return @default;
+
+		}
+}
+
+sub sierra_open {
+    my ($path,$mode) = @_;
+
+		if ($path eq "/$unregistered_file_name") {
+				return 0;
+		}
+
+		my $file = convert_path($path);
+
+    return -$! unless sysopen(FILE,$file,$mode);
+    close(FILE);
+    return 0;
+}
+
+
+sub release {
+    return 0;
+}
+
+sub sierra_read {
+
+    my ($path,$bufsize,$off) = @_;
+
+		my $file;
+
+		if ($path eq "/$unregistered_file_name") {
+				warn "Sending unregistered user data\n" if ($debug);
+				$file = "$Bin/unregistered_user.txt";
+		}
+
+		elsif ($path =~ /^\/Sample_(\d+)[^\/]*\/Lane_(\d+)[^\/]*\/(Aligned|Unaligned)\/([^\/]+)$/) {
+
+				my $sample_id = $1;
+				my $lane_id = $2;
+
+				# Check that this person has permission to look at this sample
+				unless (validate_user_permission(fuse_get_context()->{'uid'},$sample_id,$lane_id)){
+						return -ENOENT();
+				}
+
+				$file = convert_path($path);
+		}
+		else {
+				warn "Unexpected path '$path' when reading";
+				return -NOENT();
+		}
+
+
+		warn "Reading $path\n" if ($debug);
+
+    my ($rv) = -ENOSYS();
+    my ($handle) = new IO::File;
+    return -ENOENT() unless -e ($file);
+    my ($fsize) = -s $file;
+    return -ENOSYS() unless open($handle,$file);
+    if(seek($handle,$off,SEEK_SET)) {
+        read($handle,$rv,$bufsize);
+    }
+
+		warn "Data sent\n" if ($debug);
+
+    return $rv;
+}
+
+
+{
+
+		my %path_cache;
+		my $last_path_cache_clear_time;
+		sub convert_path {
+				my ($fuse_path) = @_;
+		
+				if ($fuse_path =~ /^\/Sample_\d+[^\/]*\/Lane_(\d+)[^\/]*\/(Aligned|Unaligned)\/([^\/]+)$/) {
+
+						my $lane_id=$1;
+						my $align_type=$2;
+						my $file_name=$3;
+
+						# See if we need to clearn the cache
+						unless (defined $last_path_cache_clear_time) {
+								$last_path_cache_clear_time = time();
+						}
+
+						if (time() - $last_path_cache_clear_time > 3600) {
+								$last_path_cache_clear_time = time();
+								%path_cache = ();
+						}
+
+						# See if we can resolve this from the cache.
+						if (exists $path_cache{$fuse_path}) {
+								return $path_cache{$fuse_path};
+						}
+
+						# If not we have to resolve from the database / filesystem
+
+						# First we need to get the run folder name and flowcell lane number
+						# for this lane.
+
+						$dbh->ping(); # Needed to force a reconnect if the database handle has gone stale
+
+						$get_run_folder_for_lane_sth -> execute($lane_id) or do {
+								warn "Couldn't get run folder name for lane $lane_id: $dbh->errstr() \n";
+								return(0);
+						};
+				
+						my ($flowcell_lane,$run_folder) = $get_run_folder_for_lane_sth->fetchrow_array();
+
+						unless ($run_folder) {
+								warn "No run folder found for lane $lane_id\n";
+								return (0);
+						}
+
+						# Now we can try to find the correct folder in the data directory
+
+						my ($data_folder) = glob("${data_dir}/${run_folder}/${align_type}/Project*/Sample_lane${flowcell_lane}");
+
+						unless ($data_folder) {
+								warn "Couldn't find data folder for lane $lane_id in position $flowcell_lane of $run_folder";
+								return (0);
+						}
+
+						# Now we can find the file
+
+						unless (-e "$data_folder/$file_name") {
+								warn "Couldn't locate $data_folder/$file_name from $fuse_path\n";
+								return ("");
+						}
+						
+						# Add this to the cache so we can resolve more quickly next time
+						$path_cache{$fuse_path} = "$data_folder/$file_name";
+				
+						return ("$data_folder/$file_name");
+				}
+				
+				warn "Couldn't interpret $fuse_path\n";
+				return("");
+		}
+}
+
+{
+
+		my %uids;
+		my $last_checked = 0;    # The time we last looked to see if the config file had updated
+		my $last_timestamp = 0;  # The timestamp on the config file we last loaded
+
+		sub get_sierra_id {
+				my ($uid) = @_;
+
+				$last_checked = 0 unless (defined $last_checked);
+				$last_timestamp = 0 unless (defined $last_timestamp);
+
+				# See if we need to load in the uids from the config file
+				
+				if (time() - $last_checked > $check_interval) {
+						# We need to do the check again
+
+						$last_checked = time();
+
+						unless (-e $uid_mapping_file) {
+								warn "Can't find uid mapping file at '$uid_mapping_file'";
+								return undef;
+						}
+
+						if ((stat($uid_mapping_file))[9] != $last_timestamp) {
+								# We're reloading
+
+								$last_timestamp = (stat($uid_mapping_file))[9];
+
+								%uids = ();
+
+								open (MAP,$uid_mapping_file) or do {
+										warn "Can't open mapping file '$uid_mapping_file': $!";
+										return undef;
+								};
+
+								while (<MAP>) {
+										chomp;
+										s/[\r\n]//g;
+										next if (/^\s*\#/);
+
+										my ($uid,$sierra_id) = split(/\s+/);
+
+										next unless ($uid);
+
+										unless ($sierra_id) {
+												warn "Found uid but no sierra id from line '$_'";
+												next;
+										}
+
+										unless ($uid =~ /^\d+$/) {
+												warn "Found non-numeric uid '$uid'";
+												next;
+										}
+
+										unless ($sierra_id =~ /^\d+$/) {
+												warn "Found non-numeric sierra id '$sierra_id'";
+												next;
+										}
+
+										if (exists $uids{$uid}) {
+												warn "Found duplicate uid '$uid'";
+										}
+
+										$uids{$uid} = $sierra_id;
+								}
+
+								close MAP;
+
+						}
+				}
+
+				if (exists $uids{$uid}) {
+						return ($uids{$uid});
+				}
+
+				return undef;
+
+		}
+}
+
+{
+
+		my %permission_cache;
+		my $last_flushed_time;
+		
+		sub validate_user_permission {
+				my ($uid,$sample_id,$lane_id)  = @_;
+						
+				warn "Validating uid=$uid sample=$sample_id lane=$lane_id\n" if ($debug);
+
+				# See if we need to flush the cache
+				unless (defined $last_flushed_time) {
+						$last_flushed_time = time();
+				}
+
+				# We flush every hour
+				if (time() - $last_flushed_time > 3600) {
+						$last_flushed_time = time();
+						%permission_cache = ();
+				}
+
+ 
+				# See if we're validating a lane or a sample
+				if (defined $lane_id) {
+						# See if there's a cached permission
+						if (exists $permission_cache{"$uid:$sample_id:$lane_id"}) {
+								warn "Validated $uid against sample $sample_id from cache\n" if ($debug);
+								return 1;
+						}
+						else {
+								# We need to query the database.
+								
+								# See if we can get a sierra id for this uid
+								my $sierra_id = get_sierra_id($uid);
+								unless (defined $sierra_id) {
+										return 0;
+								}
+
+								$get_permission_for_lane_sth -> execute($lane_id,$sample_id,$sierra_id) or do {
+										warn "Couldn't check permissions for sierra_id $sierra_id on sample $sample_id lane $lane_id: ".$dbh->errstr();
+										return 0;
+								};
+								
+								my ($id) = $get_permission_for_lane_sth -> fetchrow_array();
+								
+								if ($id) {
+										# They have permission, so cache this
+										$permission_cache{"$uid:$sample_id:$lane_id"} = 1;
+										warn "Validated $uid against sample $sample_id from database\n" if ($debug);
+										return 1;
+								}
+								else {
+										warn "Failed to validate $uid against sample $sample_id\n";
+										return 0;
+								}
+
+
+						}
+				}
+				else {
+						# We're just validating a sample
+						if (exists $permission_cache{"$uid:$sample_id"}) {
+								warn "Validated $uid against sample $sample_id lane_id $lane_id from cache\n" if ($debug);
+								return 1;
+						}
+						else {
+								# We need to query the database.
+								
+								# See if we can get a sierra id for this uid
+								my $sierra_id = get_sierra_id($uid);
+								unless (defined $sierra_id) {
+										return 0;
+								}
+
+								$get_permission_for_sample_sth -> execute($sample_id,$sierra_id) or do {
+										warn "Couldn't check permissions for sierra_id $sierra_id on sample $sample_id: ".$dbh->errstr();
+										return 0;
+								};
+
+								my ($id) = $get_permission_for_sample_sth -> fetchrow_array();
+
+								if ($id) {
+										# They have permission, so cache this
+										$permission_cache{"$uid:$sample_id"} = 1;
+										warn "Validated $uid against sample $sample_id lane_id $lane_id from database\n" if ($debug);
+										return 1;
+								}
+								else {
+										warn "Failed to validate $uid against sample $sample_id lane $lane_id\n";
+										return 0;
+								}
+						}
+				}
+		}
+}
+
+
+Fuse::main(
+    mountpoint  => $mountpoint,
+    getdir      => \&getdir,
+    getattr     => \&getattr,
+		open        => \&sierra_open,
+		release     => \&release,
+    read        => \&sierra_read,
+#		read_buf    => \&sierra_read_buf, # Our FUSE is too old to have this
+		mountopts   => "allow_other,ro",
+    threaded    => 0,
+#		debug       => $debug,
+);
+

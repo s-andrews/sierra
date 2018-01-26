@@ -1,0 +1,144 @@
+<!-- TMPL_INCLUDE NAME="header.html" -->
+
+<!-- TMPL_IF NAME=PERSON_ID -->
+<!-- TMPL_INCLUDE NAME="toolbar.html" -->
+<!-- TMPL_INCLUDE NAME="user_menu.html" -->
+<!-- /TMPL_IF -->
+
+    <div id="main">
+  <h2>Lane <!-- TMPL_VAR NAME=LANE_ID ESCAPE=HTML --></h2>
+
+  <table>
+    <tr>
+      <th>Sample ID</th>
+      <td><a href="sierra.pl?action=view_sample&amp;sample_id=<!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML --><!-- TMPL_IF NAME=AUTHKEY -->&amp;authkey=<!-- TMPL_VAR NAME=AUTHKEY ESCAPE=HTML --><!-- /TMPL_IF -->">Sample <!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML --></a></td>
+    </tr>
+    <!-- TMPL_IF NAME=IS_ADMIN -->
+    <tr>
+      <th>Flowcell ID</th>
+      <td><a href="sierra.pl?action=view_flowcell&amp;flowcell_id=<!-- TMPL_VAR NAME=FLOWCELL_ID ESCAPE=HTML -->">Flowcell <!-- TMPL_VAR NAME=FLOWCELL_ID ESCAPE=HTML --></a></td>
+    </tr>
+    <!-- /TMPL_IF -->
+    <tr>
+      <th>Flowcell lane</th>
+      <td><!-- TMPL_VAR NAME=LANE_NUMBER ESCAPE=HTML --></td>
+    </tr>
+    <tr>
+      <th>Sample Name</th>
+      <td><!-- TMPL_VAR NAME=USER_SAMPLE_NAME ESCAPE=HTML --></td>
+    </tr>
+    <tr>
+      <th>Run Folder</th>
+      <td><!-- TMPL_VAR NAME=RUN_FOLDER ESCAPE=HTML --></td>
+    </tr>
+    <tr>
+      <th>Run Type</th>
+      <td><!-- TMPL_VAR NAME=RUN_TYPE ESCAPE=HTML --></td>
+    </tr>
+    <tr>
+      <th>Date Run</th>
+      <td><!-- TMPL_VAR NAME=DATE_RUN ESCAPE=HTML --></td>
+    </tr>
+    <tr>
+      <th>Search Database</th>
+      <td><!-- TMPL_IF NAME=SEARCH_DATABASE --><!-- TMPL_VAR NAME=SEARCH_DATABASE ESCAPE=HTML --><!-- TMPL_ELSE -->No mapping<!-- /TMPL_IF --></td>
+    </tr>
+
+  </table>  
+
+
+
+  <!-- TMPL_IF NAME=FILE_TYPE_RESULTS -->
+
+  <h3 id="results">Results</h3>
+
+  <form method="GET" action="sierra.pl">
+    <input type="hidden" name="action" value="view_lane">
+    <input type="hidden" name="lane_id" value="<!-- TMPL_VAR NAME=LANE_ID ESCAPE=HTML -->">
+    <!-- TMPL_IF NAME=AUTHKEY -->
+    <input type="hidden" name="authkey" value="<!-- TMPL_VAR NAME=AUTHKEY ESCAPE=HTML -->">
+    <!-- /TMPL_IF -->
+  <table>
+  <!-- TMPL_IF NAME=BARCODES -->
+    <tr>
+      <th>Filter by barcode</th>
+      <td>
+	<select name="barcode" onChange="this.form.submit()">
+	  <option value="0">[Show All]</option>
+	  <!-- TMPL_LOOP NAME=BARCODES -->
+	  <option <!-- TMPL_IF NAME=SELECTED -->selected<!-- /TMPL_IF --> value="<!-- TMPL_VAR NAME=BARCODE_ID -->"><!-- TMPL_VAR NAME=5PRIME ESCAPE=HTML --> <!-- TMPL_VAR NAME=3PRIME ESCAPE=HTML --> <!-- TMPL_VAR NAME=DESC ESCAPE=HTML --></option>
+	  <!-- /TMPL_LOOP -->
+	</select>
+      </td>
+      <script language="Javascript" type="text/javascript">
+	//don't need a button if javascript is working.
+      </script>
+      <noscript>
+	<td><input type="submit" value="Filter"></td>
+      </noscript>
+    </tr>
+  <!-- /TMPL_IF -->
+    <tr>
+      <th>Filter by file type</th>
+      <td>
+	<select name="filetype" onChange="this.form.submit()">
+	  <option value="0">[Show All]</option>
+	  <!-- TMPL_LOOP NAME=FILE_TYPES -->
+	  <option <!-- TMPL_IF NAME=SELECTED -->selected<!-- /TMPL_IF --> value="<!-- TMPL_VAR NAME=FILE_TYPE -->"><!-- TMPL_VAR FILE_TYPE ESCAPE=HTML --></option>
+	  <!-- /TMPL_LOOP -->
+	</select>
+      </td>
+      <script language="Javascript" type="text/javascript">
+	//don't need a button if javascript is working.
+      </script>
+      <noscript>
+	<td><input type="submit" value="Filter"></td>
+      </noscript>
+    </tr>
+  </table>
+</form>
+
+  <!-- TMPL_IF NAME=FILE_TYPE_RESULTS -->
+    <table>
+    <!-- TMPL_LOOP NAME=FILE_TYPE_RESULTS -->
+      <tr><th colspan="4"><!-- TMPL_VAR NAME=FILE_TYPE ESCAPE=HTML --></th></tr>
+    <!-- TMPL_LOOP NAME=FILES -->
+    <tr>
+      <td>
+	<!-- TMPL_IF NAME=FILE_INFORMATION -->
+	<img src="images/info_icon_20.png" title="<!-- TMPL_VAR NAME=FILE_INFORMATION ESCAPE=HTML -->" alt="[INFO]">
+	<!-- TMPL_ELSE -->
+	<img src="images/noinfo_icon_20.png" title="No information for this file" alt="[NO INFO]">
+	<!-- /TMPL_IF -->
+      </td>
+    <td>
+	<a href="sierra.pl/<!-- TMPL_VAR NAME=FILE_NAME ESCAPE=HTML -->?action=send_file&amp;lane_id=<!-- TMPL_VAR NAME=LANE_ID ESCAPE=HTML -->&amp;path=<!-- TMPL_VAR NAME=FILE_PATH ESCAPE=URL --><!-- TMPL_IF NAME=AUTHKEY -->&amp;authkey=<!-- TMPL_VAR NAME=AUTHKEY ESCAPE=HTML --><!-- /TMPL_IF -->"><!-- TMPL_VAR NAME=FILE_NAME ESCAPE=HTML --></a></td>
+      <td><!-- TMPL_VAR NAME=FILE_SIZE ESCAPE=HTML --></td>
+      <td><!-- TMPL_VAR NAME=PATH ESCAPE=HTML --></td>
+    </tr>
+    <!-- /TMPL_LOOP -->
+  <!-- /TMPL_LOOP -->
+  </table>
+
+  
+  <!-- TMPL_ELSE -->
+  <h3 id="results">No Results Available</h3>
+  <!-- /TMPL_IF -->
+
+  <!-- /TMPL_IF -->
+
+
+  <!-- TMPL_IF NAME=LINKS -->
+  <h3 id="results">Links</h3>
+  <pre>
+    <!-- TMPL_LOOP NAME=LINKS -->wget &quot<!-- TMPL_VAR NAME=LINK ESCAPE=HTML -->&quot -O &quot<!-- TMPL_VAR NAME=FILENAME ESCAPE=HTML -->&quot 
+    <!-- /TMPL_LOOP -->
+    </pre>
+    <!-- /TMPL_IF -->
+
+
+    </div>
+
+
+
+<!-- TMPL_INCLUDE NAME="footer.html" -->

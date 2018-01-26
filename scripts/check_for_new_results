@@ -1,0 +1,312 @@
+#!/usr/bin/perl
+
+##########################################################################
+#                                                                        #
+# Copyright 2013-14, Simon Andrews (simon.andrews@babraham.ac.uk)        #
+#                                                                        #
+# This file is part of Sierra.                                           #
+#                                                                        #
+# Sierra is free software: you can redistribute it and/or modify         #
+# it under the terms of the GNU General Public License as published by   #
+# the Free Software Foundation, either version 3 of the License, or      #
+# (at your option) any later version.                                    #
+#                                                                        #
+# Sierra is distributed in the hope that it will be useful,              #
+# but WITHOUT ANY WARRANTY; without even the implied warranty of         #
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          #
+# GNU General Public License for more details.                           #
+#                                                                        #
+# You should have received a copy of the GNU General Public License      #
+# along with Sierra.  If not, see <http://www.gnu.org/licenses/>.        #
+##########################################################################
+
+use warnings;
+use strict;
+use DBI;
+use FindBin qw($Bin);
+use lib "$Bin/../source";
+use Sierra::Constants;
+use Sierra::IlluminaRun;
+use Getopt::Long;
+use File::Copy;
+use HTML::Template;
+use Net::SMTP;
+
+my $CHECK_DATA_VERSION = "0.3";
+
+chdir ("$Bin/../templates") or die "Can't move to templates directory: $!";
+
+# Collect the options the user has supplied.
+
+my $interval;
+my $quiet;
+my $help;
+my $version;
+
+
+my $result = GetOptions("interval=i" => \$interval,
+			"quiet"    => \$quiet,
+			"help"     => \$help,
+			"version"  => \$version,
+		       );
+die "Failed to process options" unless ($result);
+
+if ($help) {
+  print while (<DATA>);
+  exit;
+}
+
+if ($version) {
+  print "check_for_new_results version $CHECK_DATA_VERSION from Sierra $Sierra::Constants::SIERRA_VERSION\n";
+  exit;
+}
+
+# We set a default interval if they've not supplied one
+$interval = 24 unless ($interval);
+
+
+# This data structure is going to keep the list of the
+# runs and lanes in which we've found new files.  The
+# key will be the run id and the values will be the lanes
+# which changed.
+
+my %updated_runs;
+
+
+
+# Now we can start going through the runs to look for anything new
+
+# We can now try to connect to the database
+my $dbh = DBI->connect("DBI:mysql:database=$Sierra::Constants::DB_NAME;host=$Sierra::Constants::DB_SERVER",$Sierra::Constants::DB_USERNAME,$Sierra::Constants::DB_PASSWORD,{RaiseError=>0,AutoCommit=>1});
+
+unless ($dbh) {
+  die ("Couldn't connect to Sierra database: ".$DBI::errstr);
+}
+
+# Go through the full list of runs and process them all
+
+my $all_runs_sth = $dbh->prepare("SELECT id,run_folder_name FROM run order by id DESC");
+
+$all_runs_sth->execute() or die "Failed to get list of runs: ".$dbh->errstr()."\n";
+
+while (my ($run_id,$folder) = $all_runs_sth->fetchrow_array()) {
+
+  unless ($quiet) {
+    warn "Checking for updates in $folder\n";
+  }
+
+  check_for_update($run_id,$folder);
+
+}
+
+# As a sanity check we won't go any further if we've found
+# more than 10 runs which have changed.  If this is the case
+# then there's probably some global thing we've changed (or
+# there's a bug).  In any case we don't want to notify 
+# everyone who has ever run a sample that their sample has
+# been updated
+
+if (keys %updated_runs > 10) {
+  die "Found ".(scalar keys %updated_runs)." which changed - not sending this many emails\n";
+}
+
+
+# Now we have a list of run folders and lanes which changed
+# We now want to translate these into a set of users and
+# associated runs and samples so we can format the emails
+# we need to send out.
+
+
+# This data structure is going to be indexed by user (email)
+# and will contain a set of runs which have been updated and
+# each run will contain a set of lanes which have been updated
+
+my %per_user_reports;
+
+# This data structure will hold information about the runs
+# which have been updated.
+my %run_details;
+
+# Get the run details first
+
+my $run_details_sth = $dbh->prepare("SELECT flowcell_id,run_folder_name FROM run where id=?");
+
+foreach (keys %updated_runs) {
+  $run_details_sth -> execute($_) or die "Failed to get details for run $_ :".$dbh->errstr();
+
+  my ($flowcell_id,$run_folder) = $run_details_sth -> fetchrow_array();
+  $run_details{$_} = {FLOWCELL_ID => $flowcell_id, RUN_FOLDER => $run_folder};
+}
+
+# Now get the sample details for each user
+
+my $sample_details_sth = $dbh->prepare("SELECT person.email,person.first_name,person.last_name,lane.id,sample.id,sample.users_sample_name FROM lane,flowcell,run,sample,person WHERE lane.lane_number=? AND lane.flowcell_id=flowcell.id AND run.id=? AND run.flowcell_id=flowcell.id AND lane.sample_id=sample.id AND sample.person_id=person.id");
+
+foreach my $run_id (keys %updated_runs) {
+  foreach my $lane_number (@{$updated_runs{$run_id}}) {
+
+    $sample_details_sth -> execute($lane_number,$run_id) or die "Failed to get sample details for lane $lane_number and run $run_id:".$dbh->errstr();
+
+    while (my ($email,$first,$last,$lane_id,$sample_id,$sample_name) = $sample_details_sth -> fetchrow_array()) {
+	
+      push @{$per_user_reports{$email}->{$run_id}},{LANE_ID => $lane_id, SAMPLE_ID => $sample_id, SAMPLE_NAME => $sample_name};
+
+      # We also add everything to the list of people who
+      # want to be notified
+      foreach my $notified(@Sierra::Constants::NOTIFY_ABOUT_RUNS) {
+	push @{$per_user_reports{$notified}->{$run_id}},{LANE_ID => $lane_id, SAMPLE_ID => $sample_id, SAMPLE_NAME => $sample_name, USER_NAME => "$first $last"};
+      }
+    }
+  }
+}
+
+# Now we can go ahead and send the emails
+
+my $email_template = HTML::Template -> new (filename => 'new_results_email.txt');
+
+foreach my $email (keys %per_user_reports) {
+
+  my @runs;
+
+  foreach my $run_id (keys %{$per_user_reports{$email}}) {
+    push @runs, {RUN => $run_id,
+		 FLOWCELL_ID => $run_details{$run_id}->{FLOWCELL_ID},
+		 RUN_FOLDER => $run_details{$run_id}->{RUN_FOLDER},
+		 SAMPLES => $per_user_reports{$email}->{$run_id}};
+  }
+
+
+  $email_template->param(RUNS => \@runs);
+
+  send_email("Updated sequencing data available",$email_template->output,($email));
+
+}
+
+sub send_email {
+
+  my ($subject,$message,@recipiants) = @_;
+
+
+  my $smtp = Net::SMTP -> new(Host => $Sierra::Constants::SMTP_SERVER,
+			      Timeout => 30,
+			      Debug => 0);
+
+  unless ($smtp) {
+    die ("Failed to connect to $Sierra::Constants::SMTP_SERVER");
+  }
+
+
+  if ($Sierra::Constants::SMTP_USERNAME) {
+    $smtp->auth($Sierra::Constants::SMTP_USERNAME,$Sierra::Constants::SMTP_PASSWORD) or die "Failed to authenticate with SMTP server";
+  }
+
+  $smtp->mail("Sierra LIMS System <$Sierra::Constants::MAILS_FROM_ADDRESS>") or die "Invalid from address $Sierra::Constants::MAILS_FROM_ADDRESS";
+
+  $smtp->to(@recipiants) or die "Invalid email address in @recipiants";
+
+  $smtp->data();
+
+  foreach my $recipiant (@recipiants) {
+    $smtp->datasend("To: $recipiant\n");
+  }
+
+  $smtp->datasend("From: Sierra LIMS System <$Sierra::Constants::MAILS_FROM_ADDRESS>\n");
+  $smtp->datasend("Subject: $subject\n");
+  $smtp->datasend("\n"); # End of headers
+  $smtp->datasend($message);
+  $smtp->dataend();
+  $smtp->quit();
+
+  return 1;
+
+}
+
+
+
+
+sub check_for_update {
+
+  my ($run_id,$folder) = @_;
+
+  my $run_obj = Sierra::IlluminaRun->new($folder);
+
+  die "Couldn't make run object from '$folder'\n" unless ($run_obj);
+
+  my @results_folders = $run_obj->get_results_folders();
+
+  # TODO: Get the lane count from the database
+ LANE:for my $lane_number (1..8) {
+
+    foreach my $results_folder (@results_folders) {
+
+      my $lane = $run_obj -> get_lane($lane_number);
+      my @files = $results_folder -> get_files_for_lane($lane);
+
+
+      foreach my $file (@files) {
+
+	# Check how long it is since this file was modified
+	my $modtime = (time - (stat($file->path()))[9]) / (60*60); # Gets the modtime
+
+#	warn "Modtime for ".$file->path()." is $modtime\n";
+
+	if ($modtime < $interval) {
+	  # We can flag this lane as having changed and move on
+
+	  warn "Adding run $run_id and lane $lane_number to notify list" unless ($quiet);
+	  push @{$updated_runs{$run_id}},$lane_number;
+	  next LANE;
+	}
+      }
+    }
+
+  }
+
+}
+
+
+__DATA__
+
+check_for_new_results
+
+NAME
+
+  check_for_new_results - Notify users of newly added results
+
+SYNOPSIS
+
+  check_for_new_results [--interval 48]
+
+DESCRIPTION
+
+  This script goes through all runs in sierra system and looks
+  for any files which have been recently added.  It then notifies
+  the people who submitted modified samples that there is new 
+  data for them to look at.  It is designed to be run as a cron
+  job on the sierra server so that it goes through the data each
+  night.
+
+  Options which can be applied are:
+
+  -i --interval  Say how recently (in hours) a file must have
+                 been modified to include it in the report.
+
+  -q --quiet     Supresses all progress information and only
+                 produces output in the event of an error.
+
+  -h --help      Print out help instructions and exit.
+
+  -v --version   Print the program version and exit.
+
+AUTHOR
+
+  Written by Simon Andrews (simon.andrews@babraham.ac.uk)
+
+REPORTING BUGS
+
+  Please report any bugs to our bugzilla instance at:
+
+  www.bioinformatics.babraham.ac.uk/bugzilla/
+
+  Bugs should be filed under the Sierra product.
+

@@ -1,0 +1,46 @@
+<!-- TMPL_INCLUDE NAME="header.html" -->
+<!-- TMPL_INCLUDE NAME="toolbar.html" -->
+<!-- TMPL_INCLUDE NAME="user_menu.html" -->
+
+    <div id="main">
+  <h2>Run Search Results</h2>
+
+  <table>
+    <tr>
+      <th>First Name</th>
+      <th>Last Name</th>
+      <th>Email</th>
+      <th>Active samples</th>
+      <th>Inactive samples</th>
+      <th>Edit</th>
+    </tr>
+
+    <!-- TMPL_IF NAME=PEOPLE -->
+
+    <!-- TMPL_LOOP NAME=PEOPLE -->
+    <tr>
+      <td><!-- TMPL_VAR NAME=FIRST_NAME ESCAPE=HTML --></td>
+      <td><!-- TMPL_VAR NAME=LAST_NAME ESCAPE=HTML --></td>
+      <td><a href="mailto:<!-- TMPL_VAR NAME=EMAIL ESCAPE=HTML -->"><!-- TMPL_VAR NAME=EMAIL ESCAPE=HTML --></a></td>
+      <td><a href="sierra.pl?action=run_sample_search&amp;user=<!-- TMPL_VAR NAME=PERSON_ID ESCAPE=HTML -->&amp;status=Active"><!-- TMPL_VAR NAME=ACTIVE_SAMPLES ESCAPE=HTML --></a></td>
+      <td><a href="sierra.pl?action=run_sample_search&amp;user=<!-- TMPL_VAR NAME=PERSON_ID ESCAPE=HTML -->&amp;status=Complete"><!-- TMPL_VAR NAME=INACTIVE_SAMPLES ESCAPE=HTML --></a></td>
+      <td><a href="sierra.pl?action=change_details&amp;person_id=<!-- TMPL_VAR NAME=PERSON_ID ESCAPE=HTML -->">Edit</a></td>
+    </tr>
+    <!-- /TMPL_LOOP -->
+
+    <!-- TMPL_ELSE -->
+    <tr>
+      <td colspan="6" class="center">No People Found</td>
+    </tr>
+    <!-- /TMPL_IF -->
+
+  </table>  
+
+
+
+
+    </div>
+
+
+
+<!-- TMPL_INCLUDE NAME="footer.html" -->

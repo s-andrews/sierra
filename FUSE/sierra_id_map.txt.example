@@ -1,0 +1,9 @@
+# This is a sierra id map file.  It's used to relate uids on a unix
+# system to sierra user ids in a sierra LIMS so that the appropriate
+# samples can be shown to the users.
+# 
+# The format is a 2 column (multi) whitespace delimited file with 
+# unix id then sierra id.  So to map unix id 5 to sierra id 100 you
+# would put:
+
+5				100  # Comments after the data are ignored

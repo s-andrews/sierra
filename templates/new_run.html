@@ -1,0 +1,83 @@
+<!-- TMPL_INCLUDE NAME="header.html" -->
+<!-- TMPL_INCLUDE NAME="toolbar.html" -->
+<!-- TMPL_INCLUDE NAME="user_menu.html" -->
+
+    <div id="main">
+  <form action="sierra.pl" method="POST">
+  <input type="hidden" name="action" value="finish_new_run">
+  <input type="hidden" name="flowcell_id" value="<!-- TMPL_VAR NAME=FLOWCELL_ID ESCAPE=HTML -->">
+
+  <h2>Create New Run</h2>
+
+    <table>
+    <tr>
+      <th>Flowcell ID</th>
+      <td><!-- TMPL_VAR NAME=FLOWCELL_ID ESCAPE=HTML --></td>
+    </tr>
+    <tr>
+      <th>Flowcell Serial Number</th>
+      <td><!-- TMPL_VAR NAME=SERIAL_NUMBER ESCAPE=HTML --></td>
+    </tr>
+    <tr>
+      <th>Number of Lanes</th>
+      <td><!-- TMPL_VAR NAME=LANES ESCAPE=HTML --></td>
+    </tr>
+    <tr>
+      <th>Run Type</th>
+      <td><!-- TMPL_VAR NAME=RUN_TYPE ESCAPE=HTML --></td>
+    </tr>
+    <tr>
+      <th>Control Lane</th>
+      <td><!-- TMPL_IF NAME=CONTROL_LANE --><!-- TMPL_VAR NAME=CONTROL_LANE ESCAPE=HTML --><!-- TMPL_ELSE -->No control lane<!-- /TMPL_IF --></td>
+    </tr>
+    <tr>
+      <th>Machine</th>
+      <td>
+	<!-- TMPL_IF NAME=MACHINES -->
+	<select name="machine_id">
+	  <!-- TMPL_LOOP NAME=MACHINES -->
+	  <option value="<!-- TMPL_VAR NAME=MACHINE_ID ESCAPE=HTML -->"><!-- TMPL_VAR NAME=MACHINE_NAME ESCAPE=HTML --></option>
+	  <!-- /TMPL_LOOP -->
+	</select>
+	<!-- TMPL_ELSE -->
+	There are no active machines available for this type of run
+	<!-- /TMPL_IF -->
+      </td>
+    </tr>
+    <tr>
+      <th>Date</th>
+      <td>
+	<select name="day">
+	  <!-- TMPL_LOOP NAME=DAYS -->
+	  <option <!-- TMPL_IF NAME=SELECTED -->selected<!-- /TMPL_IF -->><!-- TMPL_VAR NAME=NAME ESCAPE=HTML --></option>
+	  <!-- /TMPL_LOOP -->
+	</select> 
+	<select name="month">
+	  <!-- TMPL_LOOP NAME=MONTHS -->
+	  <option value="<!-- TMPL_VAR NAME=NUMBER ESCAPE=HTML -->" <!-- TMPL_IF NAME=SELECTED -->selected<!-- /TMPL_IF -->><!-- TMPL_VAR NAME=NAME ESCAPE=HTML --></option>
+	  <!-- /TMPL_LOOP -->
+	</select> 
+	<select name="year">
+	  <!-- TMPL_LOOP NAME=YEARS -->
+	  <option <!-- TMPL_IF NAME=SELECTED -->selected<!-- /TMPL_IF -->><!-- TMPL_VAR NAME=YEAR ESCAPE=HTML --></option>
+	  <!-- /TMPL_LOOP -->
+	</select>
+      </td>
+    </tr>
+    <tr>
+      <th>Run Folder Name</th>
+      <td><input type="text" name="run_folder" size="40" value="<!-- TMPL_VAR NAME=RUN_FOLDER ESCAPE=HTML -->"></td>
+    </tr>
+
+  </table>
+
+  <p class="center">
+  <input type="submit" value="Create Run">
+</p>
+
+  </form>
+    </div>
+
+
+
+<!-- TMPL_INCLUDE NAME="footer.html" -->

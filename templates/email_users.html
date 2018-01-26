@@ -1,0 +1,60 @@
+<!-- TMPL_INCLUDE NAME="header.html" -->
+<!-- TMPL_INCLUDE NAME="toolbar.html" -->
+<!-- TMPL_INCLUDE NAME="user_menu.html" -->
+
+    <div id="main">
+
+
+  <form action="sierra.pl" method="POST">
+  <input type="hidden" name="action" value="email_users">
+
+  <h2>Send Email to Sierra Users</h2>
+
+    <!-- TMPL_IF NAME=SENT_COUNT -->
+
+    <h3 class="center">Sent mail to <!-- TMPL_VAR NAME=SENT_COUNT ESCAPE=HTML --> users</h3>
+
+    <!-- /TMPL_IF -->
+
+    <table>
+    <tr>
+      <th>Which users?</th>
+      <td>
+	<select name="which_users">
+	  <option>Users active in the last year</option>
+	  <option>Users with samples in the queue</option>
+	  <option>All users</option>
+	</select>
+      </td>
+    </tr>
+    <tr>
+      <th>Subject</th>
+      <td>
+	<input type="text" name="subject" size="50">
+      </td>
+    </tr>
+  </table>
+  <table>
+    <tr>
+      <th colspan=2>Message</th>
+    </tr>
+
+    <tr>
+      <td colspan=2>
+	<textarea name="message" cols=80 rows=20></textarea>
+      </td>
+    </tr>
+
+  </table>
+
+  <p class="center">
+  <input type="submit" value="Send Email">
+</p>
+
+  </form>
+
+    </div>
+
+
+
+<!-- TMPL_INCLUDE NAME="footer.html" -->

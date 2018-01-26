@@ -1,0 +1,247 @@
+<!-- TMPL_INCLUDE NAME="header.html" -->
+<!-- TMPL_INCLUDE NAME="toolbar.html" -->
+<!-- TMPL_INCLUDE NAME="user_menu.html" -->
+
+    <div id="main">
+  <!-- TMPL_IF NAME=SAMPLE_ID -->
+  <h2>Edit Sample</h2>
+  <!-- TMPL_ELSE -->
+  <h2>Create New Sample</h2>
+
+  <!-- TMPL_IF NAME=LAST_SAMPLE_ID -->
+  <h3 class="center">Created Sample <!-- TMPL_VAR NAME=LAST_SAMPLE_ID ESCAPE=HTML --></h3>
+  <!-- /TMPL_IF -->
+  <!-- /TMPL_IF -->
+
+  <form action="sierra.pl" method="POST" enctype="multipart/form-data">
+    <input type="hidden" name="action" value="finish_edit_sample">
+    <!-- TMPL_IF NAME=SAMPLE_ID -->
+    <input type="hidden" name="sample_id" value="<!-- TMPL_VAR NAME=SAMPLE_ID -->">
+    <!-- /TMPL_IF -->
+  <table>
+    <tr>
+      <th>Sample Name</th>
+      <td><input type="text" name="name" value="<!-- TMPL_VAR NAME=USER_SAMPLE_ID ESCAPE=HTML -->"></td>
+    </tr>
+    <tr>
+      <th>Sample Type</th>
+      <td>
+	<select name="sample_type">
+	  <option value="0">[Unknown]</option>
+	  <!-- TMPL_LOOP NAME=SAMPLE_TYPES -->    
+	  <option value="<!-- TMPL_VAR NAME=ID ESCAPE=HTML -->" <!-- TMPL_IF NAME=SELECTED -->selected<!-- /TMPL_IF -->><!-- TMPL_VAR NAME=NAME ESCAPE=HTML --></option>
+	  <!-- /TMPL_LOOP -->
+	</select>
+      </td>
+    </tr>
+    <tr>
+
+      <!-- TMPL_IF NAME=IS_ADMIN -->
+      <th>Lanes Required<!-- TMPL_IF NAME=LANES_RUN --><br>(Min <!-- TMPL_VAR NAME=LANES_RUN ESCAPE=HTML -->)<!-- /TMPL_IF --></th>
+      <td><input type="text" name="lanes_required" value="<!-- TMPL_VAR NAME=LANES_REQUESTED ESCAPE=HTML -->"></td>
+      <!-- TMPL_ELSE -->
+      <!-- TMPL_IF NAME=LANES_REQUESTED -->
+      <input type="hidden" name="lanes_required" value="<!-- TMPL_VAR NAME=LANES_REQUESTED ESCAPE=HTML -->">
+      <th>Lanes Required</th>
+      <td><!-- TMPL_VAR NAME=LANES_REQUESTED ESCAPE=HTML --></td>
+      <!-- TMPL_ELSE -->
+      <th>Lanes Required</th>
+      <td>Please contact your <a href="mailto:<!-- TMPL_VAR NAME=ADMIN_EMAIL ESCAPE=URL -->">sierra admin</a> after creating your sample<br>if you want to run a sample over multiple sequencing lanes</td>
+      <!-- /TMPL_IF -->
+      <!-- /TMPL_IF -->
+    </tr>
+
+    <!-- TMPL_IF NAME=SHOW_BUDGET_CODES -->
+    <tr>
+      <th>Budget Code</th>
+      <td>
+	<!-- TMPL_IF NAME=BUDGET_CODES -->
+	<select name="budget">
+	  <!-- TMPL_IF NAME=IS_ADMIN -->
+	  <option value="">[No code]</option>
+	  <!-- /TMPL_IF -->
+	  <!-- TMPL_LOOP NAME=BUDGET_CODES -->
+	  <option value="<!-- TMPL_VAR NAME=CODE ESCAPE=HTML -->" <!-- TMPL_IF NAME=SELECTED -->selected<!-- /TMPL_IF -->><!-- TMPL_VAR NAME=CODE ESCAPE=HTML --> (<!-- TMPL_VAR NAME=DESCRIPTION ESCAPE=HTML -->)</option>
+	  <!-- /TMPL_LOOP -->
+	</select>
+	<!-- TMPL_ELSE -->
+	<input type="text" name="budget" value="<!-- TMPL_VAR NAME=BUDGET_CODE -->">
+	<!-- /TMPL_IF -->
+      </td>
+
+    </tr>
+    <!-- /TMPL_IF -->
+
+
+    <tr>
+      <th>Run Type</th>
+      <td>
+	<!-- TMPL_IF NAME=LANES_RUN -->
+	<!-- TMPL_LOOP NAME=RUNTYPES -->          
+	<!-- TMPL_IF NAME=SELECTED --><!-- TMPL_VAR NAME=NAME ESCAPE=HTML --><!-- /TMPL_IF -->
+	<!-- /TMPL_LOOP -->
+	<!-- TMPL_ELSE -->
+	<select name="type">
+	  <!-- TMPL_LOOP NAME=RUNTYPES -->
+	  <option value="<!-- TMPL_VAR NAME=ID ESCAPE=HTML -->" <!-- TMPL_IF NAME=SELECTED -->selected<!-- /TMPL_IF --> title="<!-- TMPL_VAR NAME=DESCRIPTION ESCAPE=HTML -->"><!-- TMPL_VAR NAME=NAME ESCAPE=HTML --></option>
+	  <!-- /TMPL_LOOP -->
+	</select>
+	<!-- /TMPL_IF -->
+      </td>
+    </tr>
+
+    <tr>
+      <th>Adapter Type</th>
+      <td>
+	<select name="adapter">
+	  <option value="">[Unknown]</option>
+	  <!-- TMPL_LOOP NAME=ADAPTERS -->
+	  <option value="<!-- TMPL_VAR NAME=ID ESCAPE=HTML -->" <!-- TMPL_IF NAME=SELECTED -->selected<!-- /TMPL_IF --> ><!-- TMPL_VAR NAME=NAME ESCAPE=HTML --></option>
+	  <!-- /TMPL_LOOP -->
+	</select>
+      </td>
+    </tr>
+
+    <tr>
+      <th>Map Against</th>
+      <td>
+	<select name="database">
+	  <!-- TMPL_LOOP NAME=DATABASES -->
+	  <option value="<!-- TMPL_VAR NAME=ID ESCAPE=HTML -->" <!-- TMPL_IF NAME=SELECTED -->selected<!-- /TMPL_IF -->><!-- TMPL_VAR NAME=SPECIES ESCAPE=HTML --> <!-- TMPL_IF NAME=ASSEMBLY -->: <!-- TMPL_VAR NAME=ASSEMBLY ESCAPE=HTML --><!-- /TMPL_IF --></option>
+	  <!-- /TMPL_LOOP -->
+	</select>
+      </td>
+    </tr>
+    <!-- TMPL_IF NAME=IS_ADMIN -->
+    <tr>
+      <th>User</th>
+      <td>
+	<select name="user">
+	  <!-- TMPL_LOOP NAME=USERS -->
+	  <option value="<!-- TMPL_VAR NAME=ID ESCAPE=HTML -->"<!-- TMPL_IF NAME=SELF -->selected<!-- /TMPL_IF -->><!-- TMPL_VAR NAME=USERNAME ESCAPE=HTML --></option>
+	  <!-- /TMPL_LOOP -->
+	</select>
+      </td>
+    </tr>
+    <tr>
+      <th>Control Sample</th>
+      <td><input type="checkbox" name="control" <!-- TMPL_IF NAME=CONTROL -->checked<!-- /TMPL_IF -->></td>
+    </tr>
+    <!-- /TMPL_IF -->
+    <!-- TMPL_IF NAME=SAMPLE_ID -->
+    <tr>
+      <th>Force to be complete</th>
+      <td><input type="checkbox" name="force_complete"></td>
+    </tr>
+    <tr>
+      <th>Upload barcode sheet<br>(Replaces existing barcodes)</th>
+      <td><input type="file" name="barcode_file"></td>
+    </tr>
+    <!-- TMPL_ELSE -->
+    <tr>
+      <th>Upload barcode sheet</th>
+      <td><input type="file" name="barcode_file"></td>
+    </tr>
+    <!-- /TMPL_IF -->
+    <tr>
+      <th>Add Note</th>
+      <td><textarea name="note" cols="30" rows="6"></textarea></td>
+    </tr>
+
+  </table>
+  <!-- TMPL_IF NAME=SAMPLE_ID -->
+  <p class="center"><input type="submit" value="Edit Sample"></p>
+  <!-- TMPL_ELSE -->
+  <p class="center"><input type="submit" value="Create Sample"></p>
+  <!-- /TMPL_IF -->
+  </form>
+
+
+
+  <!-- TMPL_IF NAME=SAMPLE_ID -->
+
+  <!-- TMPL_IF NAME=BARCODES -->
+  <h3 id="barcodes">Barcodes</h3>
+  <table>
+    <tr>
+      <th>First Barcode</th>
+      <th>Second Barcode</th>
+      <th>Description</th>
+      <th>Remove</th>
+    </tr>
+
+    <!-- TMPL_LOOP NAME=BARCODES -->
+    <tr>
+      <td><!-- TMPL_IF NAME=5PRIME --><!-- TMPL_VAR NAME=5PRIME ESCAPE=HTML --><!-- TMPL_ELSE -->[None]<!-- /TMPL_IF --></td>
+      <td><!-- TMPL_IF NAME=3PRIME --><!-- TMPL_VAR NAME=3PRIME ESCAPE=HTML --><!-- TMPL_ELSE -->[None]<!-- /TMPL_IF --></td>
+      <td><!-- TMPL_VAR NAME=DESCRIPTION ESCAPE=HTML --></td>
+      <td><a href="sierra.pl?action=remove_barcode&amp;barcode_id=<!-- TMPL_VAR NAME=BARCODE_ID ESCAPE=HTML -->">Remove</a></td>
+    </tr>
+    <!-- /TMPL_LOOP -->
+
+  </table>
+  <p>&nbsp;</p>
+  <!-- TMPL_ELSE -->
+  <h3 id="barcodes">No Barcodes</h3>
+
+  <!-- /TMPL_IF -->
+  
+  <form action="sierra.pl" method="POST">
+    <input type="hidden" name="action" value="add_barcode">
+    <input type="hidden" name="sample_id" value="<!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML -->">
+    <table>
+    <tr>
+      <th>First barcode</th>
+      <td><input type="text" name="5prime" size="5"></td>
+      <th>Second barcode</th>
+      <td><input type="text" name="3prime" size="5"></td>
+      <th>Description</th>
+      <td><input type="text" name="description"></td>
+      <td><input type="submit" value="Add barcode"></td>
+    </tr>
+  </table>
+  </form>
+  
+
+  <!-- TMPL_IF NAME=AUTHKEYS -->
+  <h3 id="authkeys">Authorised links to this sample</h3>
+  <table>
+    <tr>
+      <th>Link</th>
+      <th>Message</th>
+      <th>Remove</th>
+    </tr>
+
+    <!-- TMPL_LOOP NAME=AUTHKEYS -->
+    <tr>
+      <td><a href="sierra.pl?action=view_sample&amp;sample_id=<!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML -->&amp;authkey=<!-- TMPL_VAR NAME=AUTHKEY ESCAPE=HTML -->">Link</a></td>
+      <td><!-- TMPL_VAR NAME=MESSAGE ESCAPE=HTML --></td>
+      <td><a href="sierra.pl?action=remove_authkey&amp;authkey_id=<!-- TMPL_VAR NAME=AUTHKEY_ID ESCAPE=HTML -->">Remove</a></td>
+    </tr>
+    <!-- /TMPL_LOOP -->
+
+  </table>
+  <p>&nbsp;</p>
+  <!-- TMPL_ELSE -->
+  <h3 id="barcodes">No authorised links</h3>
+
+  <!-- /TMPL_IF -->
+  
+  <form action="sierra.pl" method="POST">
+    <input type="hidden" name="action" value="add_authkey">
+    <input type="hidden" name="sample_id" value="<!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML -->">
+    <table>
+    <tr>
+      <th>Reason for link</th>
+      <td><input type="text" name="message" size="50"></td>
+      <td><input type="submit" value="Create link"></td>
+    </tr>
+  </table>
+  </form>
+
+  <!-- /TMPL_IF -->
+
+
+    </div>
+
+<!-- TMPL_INCLUDE NAME="footer.html" -->

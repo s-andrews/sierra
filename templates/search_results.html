@@ -1,0 +1,48 @@
+<!-- TMPL_INCLUDE NAME="header.html" -->
+<!-- TMPL_INCLUDE NAME="toolbar.html" -->
+<!-- TMPL_INCLUDE NAME="user_menu.html" -->
+
+    <div id="main">
+  <h2>Search Results</h2>
+
+  <table>
+    <tr>
+      <th>Sample ID</th>
+      <th>Sample Name</th>
+      <th>Sample Type</th>
+      <th>Owner</th>
+      <th>Received</th>
+      <th>Lanes Requested</th>
+      <th>Lanes Run</th>
+    </tr>
+
+    <!-- TMPL_IF NAME=SAMPLES -->
+
+    <!-- TMPL_LOOP NAME=SAMPLES -->
+    <tr>
+      <td><a href="sierra.pl?action=view_sample&amp;sample_id=<!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML -->">Sample <!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML --></a></td>
+      <td><!-- TMPL_VAR NAME=NAME ESCAPE=HTML --></td>
+      <td><!-- TMPL_VAR NAME=SAMPLE_TYPE ESCAPE=HTML --></td>
+      <td><!-- TMPL_VAR NAME=OWNER ESCAPE=HTML --></td>
+      <td><!-- TMPL_IF NAME=RECEIVED --><!-- TMPL_VAR NAME=RECEIVED ESCAPE=HTML --><!-- TMPL_ELSE --><!-- TMPL_IF NAME=IS_ADMIN --><form action="sierra.pl" method="GET"><input type="hidden" name="action" value="receive_sample"><input type="hidden" name="sample_id" value="<!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML -->"><input type="submit" value="Mark as received"></form><!-- TMPL_ELSE -->Not Yet Received<!-- /TMPL_IF--><!-- /TMPL_IF --></td>
+      <td><!-- TMPL_VAR NAME=LANES_REQUESTED ESCAPE=HTML --></td>
+      <td><!-- TMPL_IF NAME=LANE_ID --><a href="sierra.pl?action=view_lane&amp;lane_id=<!-- TMPL_VAR NAME=LANE_ID ESCAPE=HTML -->">Lane <!-- TMPL_VAR NAME=LANE_ID ESCAPE=HTML --></a><!-- TMPL_ELSE --><!-- TMPL_VAR NAME=LANES_RUN ESCAPE=HTML --><!-- /TMPL_IF --></td>
+    </tr>
+    <!-- /TMPL_LOOP -->
+
+    <!-- TMPL_ELSE -->
+    <tr>
+      <td colspan="7" class="center">No Samples Found</td>
+    </tr>
+    <!-- /TMPL_IF -->
+
+  </table>  
+
+
+
+
+    </div>
+
+
+
+<!-- TMPL_INCLUDE NAME="footer.html" -->

@@ -1,0 +1,180 @@
+## BASE URL
+# This specifies the full URL to the sierra.pl script on your
+# webserver.  If you're using the supplied apache configuration
+# file you'll just need to change the hostname part of the
+# example value shown below
+
+BASE_URL	http://www.example.com/sierra/sierra.pl
+
+## TEMP_DIR
+# A directory where session information can be stored.  Must
+# be writable by whichever user runs the web server
+
+TEMP_DIR	/tmp
+
+## DB_SERVER
+# The hostname of the machine which hosts the sierra database.
+# If the database is hosted on the same machine as the web
+# server then this should be set to 'localhost'
+
+DB_SERVER	localhost
+
+## DB_NAME
+# The name of the mysql database which contains the sierra
+# information.  If you used the default configutation this
+# will be 'sierra'
+
+DB_NAME		sierra
+
+## DB_USERNAME
+# The name of the mysql user through whom sierra should access
+# its database.  If you used the default configuration this will
+# be 'sierrauser'
+
+DB_USERNAME	sierrauser
+
+## DB_PASSWORD
+# If the sierra database requires a password you can put this
+# here.  Leave this blank if no password is required
+DB_PASSWORD	
+
+## ADMIN_NAME
+# The name of the person who runs the sierra system. This will
+# appear in help messages and emails sent by the system
+
+ADMIN_NAME	Sierra Admin
+
+## ADMIN_EMAIL
+# This is the email address which  will be linked in the footer of
+# each web page as the place to seek help with any problems
+
+ADMIN_EMAIL	sierra.admin@example.com
+
+## NOTIFY_ABOUT_RUNS
+# The addresses here will be emailed every time there is a new run
+# created.  You can use this for people who manage the processing
+# of runs or need to monitor the system.  Users with samples on the
+# run will be notified anyway.  You can add multiple items to this
+# section
+
+NOTIFY_ABOUT_RUNS	processor1@example.com
+
+NOTIFY_ABOUT_RUNS	processor2@example.com
+
+
+## SMTP_SERVER
+# The hostname of an smtp server through which you are able to send
+# emails.  You can leave this blank if you have a local mailserver.
+
+SMTP_SERVER	smtp.example.com
+
+## SMTP_USERNAME and SMTP_PASSWORD
+# If your SMTP server needs to be authenticated then you can put the
+# username and password you want to use in these filds.  Leave them
+# blank if you don't need to authenticate
+
+SMTP_USERNAME	example_username
+SMTP_PASSWORD	example_password
+
+
+## MAILS_FROM_ADDRESS
+# This is the address from which emails sent by the system will
+# appear to originate, and which will receive any bounces if the
+# mail is not successfully delivered
+
+MAILS_FROM_ADDRESS	bounces@example.com
+
+## SAMTOOLS_PATH
+# For some lookup information we need to have the full path to
+# the samtools binary.  If you know that samtools is in your 
+# web servers default path you can leave this set to just samtools
+SAMTOOLS_PATH  samtools
+
+## PUBLIC_QUEUE
+# This specifies whether normal (non-admin) users can see the list
+# of samples currently in the sequencing queue.  If set to 0 this 
+# won't be visible.  If set to 1 then the queue will be visible. This
+# effectively lets anyone see the list of waiting samples (minus sample
+# names) along with the name of the submitting user.
+
+PUBLIC_QUEUE 0
+
+##################
+##              ##
+## DATA FOLDERS ##
+##              ##
+##################
+#
+# There are 3 types of data folder which you can specify in Sierra.
+# You can choose for yourself which of the 3 classes best fits 
+# your structure and you don't have to have entries in all of these
+# classes.  You can have multiple folders in each type.
+#
+# The types are:
+#
+# 1) Working folder
+#
+# Working folders are normally used to denote temporary staging 
+# areas for data which is not fully processed.  Data from these
+# folders will appear in Sierra, but will not be used as part of
+# the backup routine.
+#
+# 2) Primary folder
+#
+# This is the primary location for processed data.  These folders
+# will be included in the set of locations to be backed up with
+# the backup script.
+#
+# 3) Backup folder
+#
+# These folders will hold secondary copies of data in the primary
+# folders. When running backups it will be assumed that the 
+# backup location should be the first listed backup folder so the
+# order of these folders is important.
+#
+# When presenting data in Sierra the various folders will be
+# searched for a match to a particular run.  The order of this
+# searching will be:
+#
+# 1st Primary folder
+# 2nd Working folder
+# 3rd Backup folder
+#
+# Within each group the search order will be the order in which the
+# folders are listed.
+
+## WORKING_FOLDER
+WORKING_FOLDER 	/data/working_folder1
+WORKING_FOLDER 	/data/working_folder2
+
+## PRIMARY_FOLDER
+PRIMARY_FOLDER /data/primary_folder1
+PRIMARY_FOLDER /data/primary_folder2
+
+## BACKUP_FOLDER
+BACKUP_FOLDER /data/backup_folder_used
+BACKUP_FOLDER /data/backup_folder_2
+
+## BUDGET_DB_SERVER
+# The hostname of the machine which hosts the optional budget
+# code database from which valid codes will be looked up.
+
+BUDGET_DB_SERVER	localhost
+
+## BUDGET_DB_NAME
+# The name of the database which contains the budget information
+
+BUDGET_DB_NAME		sierra_budget
+
+## BUDGET_DB_USERNAME
+# The name of the database user through whom sierra should access
+# the budget database
+
+BUDGET_DB_USERNAME	budgetuser
+
+## BUDGET_DB_PASSWORD
+# If the budget database requires a password you can put this
+# here.  Leave this blank if no password is required
+
+BUDGET_DB_PASSWORD	
+

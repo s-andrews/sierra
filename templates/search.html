@@ -1,0 +1,170 @@
+<!-- TMPL_INCLUDE NAME="header.html" -->
+<!-- TMPL_INCLUDE NAME="toolbar.html" -->
+<!-- TMPL_INCLUDE NAME="user_menu.html" -->
+
+    <div id="main">
+  <h2>Search for Samples</h2>
+
+    <form action="sierra.pl" method="POST">
+  <input type="hidden" name="action" value="run_sample_search">
+  <table>
+    <tr>
+      <th>Sample Name<br>(Use * as wildcard)</th>
+      <td><input type="text" name="name"></td>
+    </tr>
+    <tr>
+      <th>Sample Type</th>
+      <td>
+	<select name="sample_type">
+	  <option value="0">[Any]</option>
+	  <!-- TMPL_LOOP NAME=SAMPLE_TYPES -->    
+	  <option value="<!-- TMPL_VAR NAME=ID ESCAPE=HTML -->" <!-- TMPL_IF NAME=SELECTED -->selected<!-- /TMPL_IF -->><!-- TMPL_VAR NAME=NAME ESCAPE=HTML --></option>
+	  <!-- /TMPL_LOOP -->
+	</select>
+      </td>
+    </tr>
+    <tr>
+      <th>Sample ID</th>
+      <td><input type="text" name="sample_id"></td>
+    </tr>
+    <tr>
+      <th>Lane ID</th>
+      <td><input type="text" name="lane_id"></td>
+    </tr>
+    <tr>
+      <th>Status</th>
+      <td><select name="status"><option>[Any]</option><option>Active</option><option>Complete</option></select></td>
+    </tr>
+    <tr>
+      <th>Owner</th>
+      <td>
+	<select name="user">
+	  <!-- TMPL_LOOP NAME=USERS -->
+	  <option value="<!-- TMPL_VAR NAME=ID ESCAPE=HTML -->"<!-- TMPL_IF NAME=SELF -->selected<!-- /TMPL_IF -->><!-- TMPL_VAR NAME=USERNAME ESCAPE=HTML --></option>
+	  <!-- /TMPL_LOOP -->
+	</select">
+    </tr>
+
+    <tr>
+      <th>Date <select name="date_type"><option value=0>[select type]</option><option>submitted</option><option>accepted</option></select></th>
+      <td>
+	From: 
+	<select name="from_month">
+	  <!-- TMPL_LOOP NAME=MONTHS -->
+	  <option value="<!-- TMPL_VAR NAME=NUMBER ESCAPE=HTML -->" <!-- TMPL_IF NAME=SELECTED -->selected<!-- /TMPL_IF -->><!-- TMPL_VAR NAME=NAME ESCAPE=HTML --></option>
+	  <!-- /TMPL_LOOP -->
+	</select> 
+	<select name="from_year">
+	  <!-- TMPL_LOOP NAME=YEARS -->
+	  <option <!-- TMPL_IF NAME=SELECTED -->selected<!-- /TMPL_IF -->><!-- TMPL_VAR NAME=YEAR ESCAPE=HTML --></option>
+	  <!-- /TMPL_LOOP -->
+
+	</select> To: 
+	<select name="to_month">
+	  <!-- TMPL_LOOP NAME=MONTHS -->
+	  <option value="<!-- TMPL_VAR NAME=NUMBER ESCAPE=HTML -->" <!-- TMPL_IF NAME=SELECTED -->selected<!-- /TMPL_IF -->><!-- TMPL_VAR NAME=NAME ESCAPE=HTML --></option>
+	  <!-- /TMPL_LOOP -->
+	</select>
+	<select name="to_year">
+	  <!-- TMPL_LOOP NAME=YEARS -->
+	  <option <!-- TMPL_IF NAME=SELECTED -->selected<!-- /TMPL_IF -->><!-- TMPL_VAR NAME=YEAR ESCAPE=HTML --></option>
+	  <!-- /TMPL_LOOP -->
+	</select>
+      </td>
+
+  </table>
+  <p class="center"><input type="submit" value="Search for samples"></p>
+  </form>
+
+  <!-- TMPL_IF NAME=IS_ADMIN -->
+  <h2>Search for Runs</h2>
+
+    <form action="sierra.pl" method="POST">
+  <input type="hidden" name="action" value="run_run_search">
+  <table>
+    <tr>
+      <th>Run Folder Name<br>(Use * as wildcard)</th>
+      <td><input type="text" name="name"></td>
+    </tr>
+    <tr>
+      <th>Flowcell ID</th>
+      <td><input type="text" name="flowcell_id"></td>
+    </tr>
+    <tr>
+      <th>Run ID</th>
+      <td><input type="text" name="run_id"></td>
+    </tr>
+    <tr>
+      <th>Run Type</th>
+      <td>
+	<select name="run_type">
+	  <option>[Any]</option>
+	  <!-- TMPL_LOOP NAME=RUN_TYPES -->
+	  <option value="<!-- TMPL_VAR NAME=RUN_TYPE_ID ESCAPE=HTML -->"><!-- TMPL_VAR NAME=RUN_TYPE_NAME ESCAPE=HTML --></option>
+	  <!-- /TMPL_LOOP -->
+	</select>
+      </td>
+    </tr>
+    <tr>
+      <th>Date
+      <td>
+	Any: <input type="checkbox" name="any_date" checked>
+	From: 
+	<select name="from_month">
+	  <!-- TMPL_LOOP NAME=MONTHS -->
+	  <option value="<!-- TMPL_VAR NAME=NUMBER ESCAPE=HTML -->" <!-- TMPL_IF NAME=SELECTED -->selected<!-- /TMPL_IF -->><!-- TMPL_VAR NAME=NAME ESCAPE=HTML --></option>
+	  <!-- /TMPL_LOOP -->
+	</select> 
+	<select name="from_year">
+	  <!-- TMPL_LOOP NAME=YEARS -->
+	  <option <!-- TMPL_IF NAME=SELECTED -->selected<!-- /TMPL_IF -->><!-- TMPL_VAR NAME=YEAR ESCAPE=HTML --></option>
+	  <!-- /TMPL_LOOP -->
+
+	</select> To: 
+	<select name="to_month">
+	  <!-- TMPL_LOOP NAME=MONTHS -->
+	  <option value="<!-- TMPL_VAR NAME=NUMBER ESCAPE=HTML -->" <!-- TMPL_IF NAME=SELECTED -->selected<!-- /TMPL_IF -->><!-- TMPL_VAR NAME=NAME ESCAPE=HTML --></option>
+	  <!-- /TMPL_LOOP -->
+	</select>
+	<select name="to_year">
+	  <!-- TMPL_LOOP NAME=YEARS -->
+	  <option <!-- TMPL_IF NAME=SELECTED -->selected<!-- /TMPL_IF -->><!-- TMPL_VAR NAME=YEAR ESCAPE=HTML --></option>
+	  <!-- /TMPL_LOOP -->
+	</select>
+      </td>
+
+  </table>
+  <p class="center"><input type="submit" value="Search for runs"></p>
+  </form>
+
+  <h2>Search for People</h2>
+
+  <form action="sierra.pl" method="POST">
+  <input type="hidden" name="action" value="run_people_search">
+  <table>
+    <tr>
+      <th>First Name</th>
+      <td><input type="text" name="first_name"></td>
+    </tr>
+    <tr>
+      <th>Last Name</th>
+      <td><input type="text" name="last_name"></td>
+    </tr>
+    <tr>
+      <th>Email</th>
+      <td><input type="text" name="email"></td>
+    </tr>
+
+  </table>
+  <p class="center"><input type="submit" value="Search for people"></p>
+  </form>
+
+
+  <!-- /TMPL_IF -->
+
+
+    </div>
+
+
+
+<!-- TMPL_INCLUDE NAME="footer.html" -->

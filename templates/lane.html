@@ -1,0 +1,32 @@
+<!-- TMPL_INCLUDE NAME="header.html" -->
+<!-- TMPL_INCLUDE NAME="toolbar.html" -->
+<!-- TMPL_INCLUDE NAME="user_menu.html" -->
+
+    <div id="main">
+  <h2>Run Details for Lane <!-- TMPL_VAR NAME=LANE_ID ESCAPE=HTML --></h2>
+
+  <table>
+    <tr>
+      <th>Lane ID</th>
+      <td><!-- TMPL_VAR NAME=LANE_ID ESCAPE=HTML --></td>
+    </tr>
+    <tr>
+      <th>Sample ID</th>
+      <td><!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML --></td>
+    </tr>
+    <tr>
+      <th>Sample Name</th>
+      <td><!-- TMPL_VAR NAME=SAMPLE_NAME ESCAPE=HTML --></td>
+    </tr>
+    <tr>
+      <th>Date Run</th>
+      <td><!-- TMPL_VAR NAME=DATE ESCAPE=HTML --></td>
+    </tr>
+  </table>  
+
+
+    </div>
+
+
+
+<!-- TMPL_INCLUDE NAME="footer.html" -->
