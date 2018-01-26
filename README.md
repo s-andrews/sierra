@@ -1,2 +1,2 @@
 # Sierra
-A sequencing facility LIMS system
+Sierra is a LIMS system designed to be used by sequencing facilities.
