@@ -196,6 +196,7 @@ GRANT UPDATE on sierra.sample_type TO sierrauser@localhost;
 GRANT UPDATE on sierra.search_database TO sierrauser@localhost;
 GRANT DELETE on sierra.person_permission TO sierrauser@localhost;
 GRANT DELETE on sierra.sample_auth_key TO sierrauser@localhost;
+GRANT DELETE on sierra.barcode TO sierrauser@localhost;
 
 FLUSH PRIVILEGES;
 
