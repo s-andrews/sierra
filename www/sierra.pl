@@ -251,7 +251,7 @@ else {
 
     # If they have an authorisation key then they can also
     # potentially view individual samples, lanes, or files
-    if ($q->param("authkey")) {
+    elsif ($q->param("authkey")) {
 
       if ($action eq 'view_sample') {
 	view_sample();
@@ -510,6 +510,7 @@ sub finish_new_account {
     # password reset option to get them to confirm their
     # password
 
+    # We need to check this worked so we don't redirect if it failed
     send_password_reset(1);
   }
 
@@ -1849,6 +1850,7 @@ sub send_password_reset {
     my $template = HTML::Template -> new (filename => 'password_reminder.html', associate=>$session);
     print $session->header();
     print $template -> output();
+    return;
   }
 
   # We actually need to process the form.
