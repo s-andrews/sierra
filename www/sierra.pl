@@ -2923,45 +2923,37 @@ sub edit_sample {
   # use.  If they don't have a valid code then we don't put
   # anything up for them to select from.
 
-  my $show_budget_codes = 1 if ((!$sample_id) or $session->param("is_admin"));
+  my $show_budget_codes = 1;
 
+  # If we're an admin we get all codes, otherwise get the ones this person is allowed to see
+  my @budget_codes;
+  if ($session->param("is_admin")) {
+      @budget_codes = get_valid_budget_list();
+  }
+  else {
+      @budget_codes = get_valid_budget_list($person_id,$sample_id);
+  }
 
-  if ($show_budget_codes) {
-
-    if ($sample_id) {
-      $template->param(BUDGET_CODE => $budget_code);
-    }
-
-    else {
-      # If we're an admin we get all codes, otherwise get the ones this person is allowed to see
-      my @budget_codes;
-      if ($session->param("is_admin")) {
-	@budget_codes = get_valid_budget_list();
-      }
-      else {
-	@budget_codes = get_valid_budget_list($person_id);
-      }
-
-      # See if any of the codes here matches the one in the database
-      foreach my $code (@budget_codes) {
-	if ($code->{CODE} eq $budget_code) {
+  # See if any of the codes here matches the one in the database
+  foreach my $code (@budget_codes) {
+      if ($code->{CODE} eq $budget_code) {
 	  $code->{SELECTED} = 1;
-	}
       }
-
-      if (@budget_codes) {
-	$template->param(BUDGET_CODES => \@budget_codes);
-      }
-      else {
-	$show_budget_codes = 0;
-      }
-
-    }
-
-    $template->param(SHOW_BUDGET_CODES => $show_budget_codes);
+  }
+      
+  if (@budget_codes) {
+      $template->param(BUDGET_CODES => \@budget_codes);
+  }
+  else {
+      $show_budget_codes = 0;
+  }
 
 
-}
+
+  $template->param(SHOW_BUDGET_CODES => $show_budget_codes);
+
+
+
 
   # And a list of databases
   my @databases = ({ID=>0,SPECIES=>'[No mapping]'});
@@ -5317,7 +5309,16 @@ sub check_sample_edit_permission  {
 
 sub get_valid_budget_list {
 
-  my ($person_id) = @_;
+  my ($person_id,$sample_id) = @_;
+
+  # If no person id is specified then this is an admin and we give
+  # them everything.
+  
+  # If a person_id is specified then they get the codes they have
+  # access to.  However, if a sample_id is also specified then they
+  # also get the code currently attached to that sample (which may have
+  # been assigned by an admin), so that we don't wipe stuff out by
+  # accident.
 
   # Check to see if there's a budget database defined
   if ($Sierra::Constants::BUDGET_DB_NAME) {
@@ -5372,6 +5373,20 @@ sub get_valid_budget_list {
 			  DESCRIPTION => $description,};
 
     }
+
+    # Finally, if we have a person id and a sample id then we add in 
+    # the current budget code for that sample, even if it's not normally
+    # allowed for that user.
+
+    if ($email and $sample_id) {
+	# Find the code for that sample
+	my $sample_budget = $dbh -> selectrow_array("SELECT budget_code FROM sample WHERE id=?",undef,($sample_id));
+
+	if ($sample_budget and not exists $seen_codes{$sample_budget}) {
+	    push @valid_codes, {CODE => $sample_budget, DESCRIPTION => 'Existing code on sample'};
+	}
+    }
+
 
     return @valid_codes;
   }
