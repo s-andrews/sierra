@@ -135,6 +135,20 @@ sub get_files_for_lane {
       push @files, new Sierra::ResultFile($name,$file,'Clusterflow file','text/plain');
     }
 
+    # 10X Genomics result files
+    elsif ($name =~ /genes\.tsv$/) {
+	push @files, new Sierra::ResultFile($name,$file,'10X Genomics Results File','text/plain');
+    }
+    # compressed
+    elsif ($name =~ /10X$/ || $name =~ /genes\.tsv/  || $name =~ /matrix\.mtx/ || $name =~ /barcodes\.tsv/) {
+        push @files, new Sierra::ResultFile($name,$file,'10X Genomics Results File');
+    }
+    elsif ($name =~ /web_summary\.html/) {
+        push @files, new Sierra::ResultFile($name,$file,'10X Genomics Results File','text/html');
+    }
+
+
+
     # Barcode splitting results files
     # Clusterflow run files
     elsif ($name =~ /^barcode.*png$/) {
