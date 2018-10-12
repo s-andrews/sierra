@@ -147,6 +147,10 @@ sub get_files_for_lane {
         push @files, new Sierra::ResultFile($name,$file,'10X Genomics Results File','text/html');
     }
 
+    # MultiQC HTML reports
+    elsif ($name =~ /multiqc.*report\.html$/) {
+        push @files, new Sierra::ResultFile($name,$file,'MultiQC Reports','text/html');
+    }
 
 
     # Barcode splitting results files
