@@ -1085,7 +1085,7 @@ sub run_sample_search {
 
 
   if ($sample_id_filter) {
-    unless ($sample_id_filter =~ /^\d+$/) {
+    unless ($sample_id_filter =~ /^\d+$/ || $sample_id_filter eq "-1") {
       print_error("Sample IDs must be numbers ($sample_id_filter wasn't)");
       return;
     }
