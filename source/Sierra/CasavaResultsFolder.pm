@@ -149,9 +149,8 @@ sub get_files_for_lane {
 
     # MultiQC HTML reports
     elsif ($name =~ /multiqc.*report\.html$/) {
-        push @files, new Sierra::ResultFile($name,$file,'MultiQC Reports','text/html');
+        push @files, new Sierra::ResultFile($name,$file,'MultiQC QC Report','text/html');
     }
-
 
     # Barcode splitting results files
     # Clusterflow run files
@@ -204,12 +203,7 @@ sub get_files_for_lane {
 
     }
 
-    # MultiQC HTML reports
-    elsif ($name =~ /multiqc_report\.html$/) {
-            push @files, new Sierra::ResultFile($name,$file,'MultiQC QC Report','text/html');
-
-    }
-
+ 
 
     # Screen files
     elsif ($name =~ /_screen.txt$/) {
