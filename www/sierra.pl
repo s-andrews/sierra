@@ -2340,7 +2340,7 @@ sub view_sample {
   }
 
   # We can now get the details for this sample
-  my ($person_id,$user_sample_name,$sample_type_id,$lanes_requested,$adapter_id,$submitted,$received,$passed_qc,$run_type,$search_id,$is_complete,$first_name,$last_name) = $dbh->selectrow_array("SELECT sample.person_id,sample.users_sample_name,sample.sample_type_id,sample.lanes_required,sample.adapter_id,DATE_FORMAT(sample.submitted_date,'%e %b %Y'),DATE_FORMAT(sample.received_date,'%e %b %Y'),DATE_FORMAT(sample.passed_qc_date,'%e %b %Y'),run_type.name,sample.search_database_id,sample.is_complete,person.first_name,person.last_name FROM sample,run_type,adapter,person WHERE sample.id=? AND sample.run_type_id=run_type.id AND sample.person_id=person.id",undef,($sample_id));
+  my ($person_id,$user_sample_name,$library_prep_id,$sample_type_id,$lanes_requested,$adapter_id,$submitted,$received,$passed_qc,$run_type,$search_id,$is_complete,$first_name,$last_name) = $dbh->selectrow_array("SELECT sample.person_id,sample.users_sample_name,sample.library_prep_id,sample.sample_type_id,sample.lanes_required,sample.adapter_id,DATE_FORMAT(sample.submitted_date,'%e %b %Y'),DATE_FORMAT(sample.received_date,'%e %b %Y'),DATE_FORMAT(sample.passed_qc_date,'%e %b %Y'),run_type.name,sample.search_database_id,sample.is_complete,person.first_name,person.last_name FROM sample,run_type,adapter,person WHERE sample.id=? AND sample.run_type_id=run_type.id AND sample.person_id=person.id",undef,($sample_id));
 
   unless ($person_id) {
     print_bug("Couldn't fetch details for sample '$sample_id':".$dbh->errstr());
@@ -2371,6 +2371,16 @@ sub view_sample {
     }
   }
 
+  # Translate the library prep type into a real name
+  my $library_type = 'Unknown';
+  if ($library_prep_id) {
+    ($library_type) = $dbh->selectrow_array("SELECT name FROM library_prep WHERE id=?",undef,($library_prep_id));
+    unless (defined $library_type) {
+      print_bug("Couldn't get library type from id $library_prep_id:".$dbh->errstr());
+      return;
+    }
+  }
+
   # Translate the adapter id into a real name
   my $adapter_name;
   if ($adapter_id) {
@@ -2380,6 +2390,7 @@ sub view_sample {
   $template -> param(SAMPLE_ID => $sample_id,
 		     USER_SAMPLE_ID => $user_sample_name,
 		     SAMPLE_TYPE => $sample_type,
+		     LIBRARY_PREP_TYPE => $library_type,
 		     LANES_REQUESTED => $lanes_requested,
 		     ADAPTER => $adapter_name,
 		     SUBMITTED_DATE => $submitted,
