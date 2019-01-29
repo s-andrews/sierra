@@ -8,6 +8,7 @@ CREATE TABLE library_prep (
 );
 
 INSERT INTO library_prep (name,allows_subsamples,require_prep) VALUES ("Pre-prepared library",1,0);
+INSERT INTO library_prep (name,allows_subsamples,require_prep) VALUES ("Robot-prepared library",1,1);
 
 ALTER TABLE sample ADD library_prep_id INT NOT NULL DEFAULT 1;
 
