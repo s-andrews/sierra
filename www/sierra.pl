@@ -2,7 +2,7 @@
 
 ##########################################################################
 #                                                                        #
-# Copyright 2011-15, Simon Andrews (simon.andrews@babraham.ac.uk)        #
+# Copyright 2011-19, Simon Andrews (simon.andrews@babraham.ac.uk)        #
 #                                                                        #
 # This file is part of Sierra.                                           #
 #                                                                        #
@@ -2759,11 +2759,11 @@ sub edit_sample {
   }
 
   # We can now get the details for this sample
-  my ($person_id,$user_sample_name,$sample_type_id,$lanes_requested,$adapter_id,$budget_code,$run_type,$search_id,$is_complete,$is_control);
+  my ($person_id,$user_sample_name,$sample_type_id,$library_prep_id,$lanes_requested,$adapter_id,$budget_code,$run_type,$search_id,$is_complete,$is_control);
   my $lanes_run;
   if ($sample_id) {
 
-    ($person_id,$user_sample_name,$sample_type_id,$lanes_requested,$adapter_id,$budget_code,$run_type,$search_id,$is_complete,$is_control) = $dbh->selectrow_array("SELECT sample.person_id,sample.users_sample_name,sample.sample_type_id,sample.lanes_required,sample.adapter_id,sample.budget_code,run_type.id,sample.search_database_id,sample.is_complete,sample.is_suitable_control FROM sample,run_type WHERE sample.id=? AND sample.run_type_id=run_type.id",undef,($sample_id));
+    ($person_id,$user_sample_name,$sample_type_id,$library_prep_id,$lanes_requested,$adapter_id,$budget_code,$run_type,$search_id,$is_complete,$is_control) = $dbh->selectrow_array("SELECT sample.person_id,sample.users_sample_name,sample.sample_type_id,sample.library_prep_id,sample.lanes_required,sample.adapter_id,sample.budget_code,run_type.id,sample.search_database_id,sample.is_complete,sample.is_suitable_control FROM sample,run_type WHERE sample.id=? AND sample.run_type_id=run_type.id",undef,($sample_id));
 
     unless ($person_id) {
       print_bug("Couldn't fetch details for sample '$sample_id':".$dbh->errstr());
@@ -2924,6 +2924,28 @@ sub edit_sample {
     }
   }
 
+  # We need a list of library prep types
+  my @library_prep_types;
+  my $library_prep_type_sth = $dbh->prepare("SELECT id,name,retired FROM library_prep ORDER BY retired, name");
+  $library_prep_type_sth->execute() or do {
+    print_bug("Couldn't get list of library prep types: ".$dbh->errstr());
+    return;
+  };
+
+  while (my ($id,$name,$retired) = $library_prep_type_sth->fetchrow_array()) {
+
+    if ($retired) {
+      $name = "[Retired] $name";
+    }
+
+    if ($library_prep_id and $id == $library_prep_id) {
+	push @library_prep_types, {ID=>$id,NAME=>$name, SELECTED=>1};
+    }
+    else {
+	push @library_prep_types, {ID=>$id,NAME=>$name};
+    }
+  }
+
   # We need a list of valid budget codes
 
   # If we're editing an existing sample then only admins get to
@@ -3023,6 +3045,7 @@ sub edit_sample {
 		     ADAPTERS => \@adapter_types,
 		     SAMPLE_TYPES => \@sample_types,
 		     DATABASES => \@databases,
+		     LIBRARY_PREP => \@library_prep_types,
 		    );
 
 
@@ -3058,7 +3081,7 @@ sub finish_edit_sample {
 
     # We need to check that this person can view this sample
     unless (check_sample_edit_permission($sample_id,$session->param("person_id"))) {
-      print_bug("You do not have permission to edit this sample.  Sorry.");
+      print_bug("You do not have permission to edit this sample. Sorry.");
       return;
     }
 
@@ -3078,7 +3101,7 @@ sub finish_edit_sample {
 
   # Now we can collect the new sample details
 
-  my $sample_name = $q->param("name");
+   my $sample_name = $q->param("name");
 
   unless ($sample_name) {
     print_error("No sample name was supplied");
@@ -3124,6 +3147,14 @@ sub finish_edit_sample {
   else {
     $sample_type_id = undef;
   }
+  
+  # Library Prep Type
+  my $library_type_id=$q->param("library_prep_type");
+  unless ($library_type_id) {
+      print_error("No Library Prep Type supplied");
+      return;
+  }
+
 
   # Run type
   my $run_type;
@@ -3308,7 +3339,7 @@ sub finish_edit_sample {
 
   if ($sample_id) {
 
-    $dbh->do("UPDATE sample set person_id=?,users_sample_name=?,sample_type_id=?,lanes_required=?,adapter_id=?,budget_code=?,search_database_id=?,is_complete=?,is_suitable_control=? WHERE id=?",undef,($new_person_id,$sample_name,$sample_type_id,$lanes_required,$adapter_id,$budget_code,$db_id,$original_is_complete,$is_control,$sample_id)) or do {
+    $dbh->do("UPDATE sample set person_id=?,users_sample_name=?,sample_type_id=?,library_prep_id=?,lanes_required=?,adapter_id=?,budget_code=?,search_database_id=?,is_complete=?,is_suitable_control=? WHERE id=?",undef,($new_person_id,$sample_name,$sample_type_id,$library_type_id,$lanes_required,$adapter_id,$budget_code,$db_id,$original_is_complete,$is_control,$sample_id)) or do {
       print_bug("Couldn't update sample details: ".$dbh->errstr());
       return;
     };
@@ -3317,7 +3348,7 @@ sub finish_edit_sample {
   else {
     $made_new_sample = 1;
 
-    $dbh->do("INSERT INTO sample (person_id,users_sample_name,sample_type_id,lanes_required,adapter_id,budget_code,search_database_id,is_complete,is_suitable_control,submitted_date) VALUES (?,?,?,?,?,?,?,0,?,NOW())",undef,($new_person_id,$sample_name,$sample_type_id,$lanes_required,$adapter_id,$budget_code,$db_id,$is_control)) or do {
+    $dbh->do("INSERT INTO sample (person_id,users_sample_name,sample_type_id,library_prep_id,lanes_required,adapter_id,budget_code,search_database_id,is_complete,is_suitable_control,submitted_date) VALUES (?,?,?,?,?,?,?,?,0,?,NOW())",undef,($new_person_id,$sample_name,$sample_type_id,$library_type_id,$lanes_required,$adapter_id,$budget_code,$db_id,$is_control)) or do {
       print_bug("Couldn't create sample: ".$dbh->errstr());
       return;
     };
