@@ -35,6 +35,17 @@
       </td>
     </tr>
     <tr>
+      <th>Library Prep Type</th>
+      <td>
+	<select name="library_prep">
+	  <!-- TMPL_LOOP NAME=LIBRARY_PREP -->    
+	  <option value="<!-- TMPL_VAR NAME=ID ESCAPE=HTML -->" <!-- TMPL_IF NAME=SELECTED -->selected<!-- /TMPL_IF -->><!-- TMPL_VAR NAME=NAME ESCAPE=HTML --></option>
+	  <!-- /TMPL_LOOP -->
+	</select>
+      </td>
+    </tr>
+
+    <tr>
 
       <!-- TMPL_IF NAME=IS_ADMIN -->
       <th>Lanes Required<!-- TMPL_IF NAME=LANES_RUN --><br>(Min <!-- TMPL_VAR NAME=LANES_RUN ESCAPE=HTML -->)<!-- /TMPL_IF --></th>
