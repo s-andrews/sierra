@@ -39,7 +39,7 @@ use Sierra::IlluminaRun;
 use Data::Dumper;
 
 # This is the script which controls the normal user interface
-# of the sierra system for managing next genreation sequencing
+# of the sierra system for managing next generation sequencing
 # data.
 
 
@@ -167,6 +167,12 @@ if ($session->param("person_id")) {
     }
     elsif ($action eq 'finish_edit_adapter_type') {
       finish_edit_adapter_type();
+    }
+    elsif ($action eq 'edit_library_prep_type') {
+      edit_library_prep_type();
+    }
+    elsif ($action eq 'finish_edit_library_prep_type') {
+      finish_edit_library_prep_type();
     }
     elsif ($action eq 'edit_sample_type') {
       edit_sample_type();
@@ -4108,6 +4114,25 @@ sub configuration {
   $template->param(ADAPTER_TYPES => \@adapter_types);
 
 
+  # Now we list the library prep types
+  my $list_library_prep_types_sth = $dbh->prepare("SELECT id,name,retired,require_prep,allows_subsamples FROM library_prep ORDER BY name");
+  $list_library_prep_types_sth -> execute() or do {
+    print_bug("Couldn't get list of library prep types: ".$dbh->errstr());
+    return;
+  };
+
+  my @library_prep_types;
+  while (my ($id,$name,$retired,$requires_prep,$allows_subsamples) = $list_library_prep_types_sth -> fetchrow_array()) {
+    push @library_prep_types, {
+			LIBRARY_PREP_TYPE_ID => $id,
+			NAME => $name,
+			RETIRED => $retired,
+			REQUIRES_PREP => $requires_prep,
+		       };
+  }
+
+  $template->param(LIBRARY_PREP_TYPES => \@library_prep_types);
+
 
   # Now we list the sample types
   my $list_sample_types_sth = $dbh->prepare("SELECT id,name,description,retired FROM sample_type ORDER BY name");
@@ -4753,6 +4778,121 @@ sub finish_edit_run_type {
 
 }
 
+sub edit_library_prep_type {
+
+  unless ($session -> param("is_admin")) {
+    print_bug("Only admins can view this page and you don't appear to be one");
+    return;
+  }
+
+  my $template = HTML::Template -> new (filename=>'edit_library_prep_type.html',associate => $session);
+
+  my $library_prep_type_id = $q->param("library_prep_type_id");
+
+  if ($library_prep_type_id) {
+    my ($id,$name,$retired,$require_prep,$allows_subsamples) = $dbh->selectrow_array("SELECT id,name,retired,require_prep,allows_subsamples FROM library_prep WHERE id=?",undef,($library_prep_type_id));
+  
+    unless ($id) {
+	print_bug("Couldn't find a library prep type with id $library_prep_type_id".$dbh->errstr());
+	return;
+    }
+    
+    $template -> param (
+	LIBRARY_PREP_TYPE_ID => $library_prep_type_id,
+	NAME => $name,
+	RETIRED => $retired,
+	REQUIRE_PREP => $require_prep,
+	ALLOWS_SUBSAMPLES => $allows_subsamples,
+	);
+
+  }
+  print $session->header();
+  print $template -> output();
+
+}
+
+sub finish_edit_library_prep_type {
+    
+    unless ($session -> param("is_admin")) {
+	print_bug("Only admins can view this page and you don't appear to be one");
+	return;
+    }
+
+    my $library_prep_type_id = $q->param("library_prep_type_id");
+
+    if ($library_prep_type_id) {
+	unless ($library_prep_type_id =~ /^\d+$/) {
+	    print_bug("Library prep type id should be an integer, not '$library_prep_type_id'");
+	    return;
+	}
+    }
+    
+    # Get the name
+    my $name = $q->param("name");
+    unless ($name) {
+	print_error("No name was supplied");
+	return;
+    }
+
+    # Does it allow subsamples?
+    my $allows_subsamples = $q->param("allows_subsamples");
+    
+    if ($allows_subsamples) {
+	$allows_subsamples = 1;
+    }
+    else{
+	$allows_subsamples = 0;
+    }
+
+    # Does it require library prep?
+    my $require_prep = $q->param("require_prep");
+    
+    if ($require_prep){
+	$require_prep = 1;
+    }
+    else{
+	$require_prep = 0;
+    }
+    
+    # See if it's retired
+    my $retired = $q->param("retired");
+    if ($retired) {
+	$retired = 1;
+    }
+    else {
+	$retired = 0;
+    }
+    
+    
+    # If we have a library prep type id already we need to update its details
+    if ($library_prep_type_id) {
+	$dbh->do("UPDATE library_prep SET name=?,retired=?,require_prep=?,allows_subsamples=? WHERE id=?",undef,($name,$retired,$require_prep,$allows_subsamples,$library_prep_type_id)) or do {
+	    print_bug("Failed to update library prep type '$library_prep_type_id'".$dbh->errstr());
+	    return;
+	};
+    }
+    else {
+	# We're creating a new library prep type
+	$dbh->do("INSERT INTO library_prep (name,retired,require_prep,allows_subsamples) VALUES (?,?,?,?)",undef,($name,$retired,$require_prep,$allows_subsamples)) or do {
+	    print_bug("Failed to create new library prep type:".$dbh->errstr());
+	    return;
+	};
+	
+	($library_prep_type_id) = $dbh->selectrow_array("SELECT LAST_INSERT_ID()");
+	unless ($library_prep_type_id) {
+	    print_bug("Failed to get ID for newly created library prep ID: ".$dbh->errstr());
+	    return;
+	}
+	
+    }
+    
+    print $q->redirect("sierra.pl?action=configuration#library_prep_types");
+
+}
+
+
+
+
 
 sub edit_adapter_type {
 
@@ -4824,7 +4964,7 @@ sub finish_edit_adapter_type {
     };
   }
   else {
-    # We're creating a new run_type
+    # We're creating a new adapter type
     $dbh->do("INSERT INTO adapter (name,retired) VALUES (?,0)",undef,($name)) or do {
       print_bug("Failed to create new adapter type:".$dbh->errstr());
       return;
