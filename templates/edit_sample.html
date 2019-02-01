@@ -144,13 +144,25 @@
       <th>Force to be complete</th>
       <td><input type="checkbox" name="force_complete"></td>
     </tr>
+
     <tr>
-      <th>Upload barcode sheet<br>(Replaces existing barcodes)</th>
+      <th>Upload sample description sheet<br>(Robot-preparation only, one description per line;<br>barcodes are added automatically!)</th>
+      <td><input type="file" name="robot_barcode_file"></td>
+    </tr>
+    
+    <tr>
+      <th>Upload barcode sheet<br>Format: description TAB barcode1 TAB barcode2<br>(Replaces existing barcodes)</th>
       <td><input type="file" name="barcode_file"></td>
     </tr>
     <!-- TMPL_ELSE -->
     <tr>
-      <th>Upload barcode sheet</th>
+      <th>Upload sample description sheet<br>(Robot-preparation only, one desciption per line;<br>barcodes are added automatically!)</th>
+      <td><input type="file" name="robot_barcode_file"></td>
+    </tr>
+    
+
+    <tr>
+      <th>Upload barcode sheet<br>Format: description TAB barcode1 TAB barcode2</th>
       <td><input type="file" name="barcode_file"></td>
     </tr>
     <!-- /TMPL_IF -->
