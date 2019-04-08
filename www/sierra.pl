@@ -2204,6 +2204,14 @@ sub view_lane {
 
   while (my ($id,$prime5,$prime3,$name) = $list_barcodes_sth->fetchrow_array()) {
     my $selected = 0;
+
+    # If we have multiple barcodes we'll only show the first one
+    # since that's what will be on the filename anyway and it makes
+    # things shorter and more manageable.
+
+    $prime5 = (split(/\:/,$prime5))[0] if ($prime5);
+    $prime3 = (split(/\:/,$prime3))[0] if ($prime3);
+
     if ($id == $barcode_id) {
       push @barcode_sequences, $prime5 if ($prime5);
       push @barcode_sequences, $prime3 if ($prime3);
@@ -2539,12 +2547,12 @@ sub add_barcode {
   $barcode5 = uc($barcode5);
   $barcode3 = uc($barcode3);
 
-  if ($barcode5 and $barcode5 !~ /^[GATC]+$/) {
+  if ($barcode5 and $barcode5 !~ /^[GATC\:]+$/) {
     # Try to look up the barcode as an alias
     $barcode5 = get_barcode_for_alias($barcode5);
   }
 
-  if ($barcode3 and $barcode3 !~ /^[GATC]+$/) {
+  if ($barcode3 and $barcode3 !~ /^[GATC\:]+$/) {
     # Try to look up the barcode as an alias
     $barcode3 = get_barcode_for_alias($barcode3);
   }
@@ -2559,7 +2567,7 @@ sub add_barcode {
   # I'm going to disable this as there's no real case for
   # letting people do this.
 
-  unless ("$barcode5$barcode3" =~ /^[GATC]+$/ | $session->param("is_admin")) { # Admins can use non-GATC barcodes
+  unless ("$barcode5$barcode3" =~ /^[GATC\:]+$/ | $session->param("is_admin")) { # Admins can use non-GATC barcodes
     print_error("Barcode sequences must only contain GATC");
     return;
   }

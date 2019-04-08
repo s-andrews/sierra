@@ -87,8 +87,8 @@
 
     <!-- TMPL_LOOP NAME=BARCODES -->
     <tr>
-      <td><!-- TMPL_IF NAME=5PRIME --><!-- TMPL_VAR NAME=5PRIME ESCAPE=HTML --><!-- TMPL_ELSE -->[None]<!-- /TMPL_IF --></td>
-      <td><!-- TMPL_IF NAME=3PRIME --><!-- TMPL_VAR NAME=3PRIME ESCAPE=HTML --><!-- TMPL_ELSE -->[None]<!-- /TMPL_IF --></td>
+      <td class="barcode"><!-- TMPL_IF NAME=5PRIME --><!-- TMPL_VAR NAME=5PRIME ESCAPE=HTML --><!-- TMPL_ELSE -->[None]<!-- /TMPL_IF --></td>
+      <td class="barcode"><!-- TMPL_IF NAME=3PRIME --><!-- TMPL_VAR NAME=3PRIME ESCAPE=HTML --><!-- TMPL_ELSE -->[None]<!-- /TMPL_IF --></td>
       <td><!-- TMPL_VAR NAME=DESCRIPTION ESCAPE=HTML --></td>
     </tr>
     <!-- /TMPL_LOOP -->

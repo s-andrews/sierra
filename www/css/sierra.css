@@ -53,6 +53,11 @@ td.center {
   text-align: center;
 }
 
+td.barcode {
+    font-family: monospace;
+    font-size: 90%;
+}
+
 
 td input[type="text"]  { 
   width: 95%;
