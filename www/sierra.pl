@@ -2572,8 +2572,6 @@ sub add_barcode {
     return;
   }
 
-  $description = 'No description' unless ($description);
-
   # If there are existing barcodes we need to check that the new barcodes
   # match the length and structure (5', 3' or both) of the existing ones
   # otherwise things will break.
@@ -2627,6 +2625,42 @@ sub add_barcode {
     return;
   }
 
+  # We should check that this barcode name doesn't exist for
+  # this sample already
+
+  # If there isn't a name then we just go with barcode-x and
+  # keep increasing x until we find a name which hasn't been
+  # used.  If they specified the name then it's their job to
+  # make sure it's unique.
+
+  if ($description) {
+      my ($barcode_id) = $dbh->selectrow_array("SELECT id FROM barcode WHERE sample_id=? AND name=?",undef,($sample_id,$description));
+
+      if ($barcode_id) {
+	  print_error("This sample already has a barcode sample called \"$description\"");
+	  return;
+      }
+  }
+  else {
+      my $number = 0;
+
+      while (1) {
+	  ++$number;
+	  $description = "Barcode-$number";
+
+	  my ($barcode_id) = $dbh->selectrow_array("SELECT id FROM barcode WHERE sample_id=? AND name=?",undef,($sample_id,$description));
+
+	  last unless ($barcode_id);
+
+	  if ($number > 1000) {
+	      # Something's broken - we're never going to have more than 1000 barcodes
+	      # for a sample
+
+	      print_bug("Couldn't create a suitable barcode name for sample $sample_id");
+	      return;
+	  }
+      }
+  }
   # Make the new barcode
   $dbh->do("INSERT INTO barcode (sample_id,5_prime_barcode,3_prime_barcode,name) VALUES (?,?,?,?)",undef,($sample_id,$barcode5,$barcode3,$description)) or do {
     print_bug("Failed to insert new barcode: ".$dbh->errstr());
@@ -3192,6 +3226,9 @@ sub finish_edit_sample {
     my $fh = $q->upload("barcode_file");
 
     my %seen_barcodes;
+    my %seen_names;
+
+    my $empty_barcode_number = 1;
 
     my $all_text;
     while (<$fh>) {
@@ -3211,6 +3248,11 @@ sub finish_edit_sample {
 
       my ($desc,$barcode5,$barcode3) = split(/\t/);
 
+      unless($desc) {
+	  $desc = "Barcode-$empty_barcode_number";
+	  ++$empty_barcode_number;
+      }
+
       $barcode3 = '' unless ($barcode3);
 
       $barcode5 = uc($barcode5);
@@ -3221,12 +3263,12 @@ sub finish_edit_sample {
 	return;
       }
 
-      if ($barcode5 and $barcode5 !~ /^[GATC]+$/) {
+      if ($barcode5 and $barcode5 !~ /^[GATC\:]+$/) {
 	# Try to look up the barcode as an alias
 	$barcode5 = get_barcode_for_alias($barcode5);
       }
 
-      if ($barcode3 and $barcode3 !~ /^[GATC]+$/) {
+      if ($barcode3 and $barcode3 !~ /^[GATC\:]+$/) {
 	# Try to look up the barcode as an alias
 	$barcode3 = get_barcode_for_alias($barcode3);
       }
@@ -3237,7 +3279,7 @@ sub finish_edit_sample {
 
       }
 
-      if ("$barcode5$barcode3" =~ /([^GATC]+)/) {
+      if ("$barcode5$barcode3" =~ /([^GATC\:]+)/) {
 	unless ($session->param("is_admin")) { # Admins can enter non GATC barcodes
 	  print_error("Non GATC sequences ('$1') in barcode for $desc");
 	  return;
@@ -3264,7 +3306,13 @@ sub finish_edit_sample {
 	return;
       }
 
+      if (exists $seen_names{$desc}) {
+	  print_error("Duplicate barcode name '$desc' supplied");
+	  return;
+      }
+
       $seen_barcodes{"$barcode5:$barcode3"} = 1;
+      $seen_names{$desc} = 1;
 
       push @barcodes,{description => $desc,
 		      '5prime' => $barcode5,
