@@ -2209,8 +2209,13 @@ sub view_lane {
     # since that's what will be on the filename anyway and it makes
     # things shorter and more manageable.
 
-    $prime5 = (split(/\:/,$prime5))[0] if ($prime5);
-    $prime3 = (split(/\:/,$prime3))[0] if ($prime3);
+    # To be consistent about which one we use we need to sort the
+    # barcodes we have.  On the filenames we always show the 
+    # 'lowest' one.
+
+
+    $prime5 = (sort{$a cmp $b} (split(/\:/,$prime5)))[0] if ($prime5);
+    $prime3 = (sort{$a cmp $b} (split(/\:/,$prime3)))[0] if ($prime3);
 
     if ($id == $barcode_id) {
       push @barcode_sequences, $prime5 if ($prime5);
