@@ -5264,7 +5264,7 @@ sub show_queue {
   # Admins get full details. Normal users see a reduced summary
 
   if ($session -> param("is_admin")) {
-    $active_samples_sth = $dbh->prepare("SELECT sample.id,sample.users_sample_name,sample.lanes_required,DATE_FORMAT(sample.received_date,'%e %b %Y'),DATE_FORMAT(sample.passed_qc_date,'%e %b %Y'),person.first_name,person.last_name,run_type.name FROM sample,person,run_type WHERE  sample.is_complete != 1 AND sample.person_id=person.id AND sample.run_type_id=run_type.id AND sample.is_suitable_control != 1 ORDER BY run_type.name,sample.submitted_date DESC");
+    $active_samples_sth = $dbh->prepare("SELECT sample.id,sample.users_sample_name,sample.lanes_required,DATE_FORMAT(sample.received_date,'%e %b %Y'),DATE_FORMAT(sample.passed_qc_date,'%e %b %Y'),person.first_name,person.last_name,run_type.name FROM sample,person,run_type WHERE  sample.is_complete != 1 AND sample.person_id=person.id AND sample.run_type_id=run_type.id AND sample.is_suitable_control != 1 ORDER BY sample.submitted_date");
 
     $active_samples_sth -> execute() or do {
       print_bug("Couldn't get list of active admin samples: ".$dbh->errstr());
@@ -5274,7 +5274,10 @@ sub show_queue {
 
     my $lane_count_sth = $dbh->prepare("SELECT count(*) FROM lane WHERE sample_id=?");
 
-    my @active_samples;
+    # We're splitting the active samples by the first word
+    # in the run type.
+    my %tables;
+    
     while (my ($id,$name,$requested,$received,$passed_qc,$first_name,$last_name,$run_type)= $active_samples_sth->fetchrow_array()) {
 
       $lane_count_sth ->execute($id) or do {
@@ -5284,8 +5287,10 @@ sub show_queue {
 
       my ($lane_count) = $lane_count_sth->fetchrow_array();
 
+      my $first_word = $run_type;
+      $first_word =~ s/\s.*$//;
 
-      push @active_samples, {
+      push @{$tables{$first_word}}, {
 			     SAMPLE_ID => $id,
 			     NAME => $name,
 			     RECEIVED => $received,
@@ -5297,8 +5302,22 @@ sub show_queue {
 			     OWNER => "$first_name $last_name",
 			    };
 
-      $template -> param(ACTIVE_SAMPLES => \@active_samples);
+      
+      
     }
+
+    # Now extract the tables into an array
+    my @tables;
+    foreach my $table (sort keys %tables) {
+      push @tables, {
+	TABLE_NAME => $table,
+	ACTIVE_SAMPLES => $tables{$table}
+      };
+    }
+    
+    $template -> param(TABLES => \@tables);
+
+    
   }
 
   else {

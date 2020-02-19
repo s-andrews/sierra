@@ -33,6 +33,10 @@ table {
   text-align: center;
 }
 
+table.fullwidth {
+    width: 90%;
+}
+
 th { 
   text-align: center;
   background-color: #326B30;

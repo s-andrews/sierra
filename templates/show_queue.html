@@ -9,7 +9,11 @@
 
   <!-- TMPL_IF NAME=IS_ADMIN -->
 
-  <table>
+  <!-- TMPL_LOOP NAME=TABLES -->
+
+  <h3 class="center"><!-- TMPL_VAR NAME=TABLE_NAME ESCAPE=HTML --></h3>
+  
+  <table class="fullwidth">
     <tr>
       <th>Sample ID</th>
       <th>Sample Name</th>
@@ -42,7 +46,10 @@
     </tr>
     <!-- /TMPL_IF -->
 
-  </table>  
+  </table>
+
+  <!-- /TMPL_LOOP -->
+  
 
   <!-- TMPL_ELSE -->
   <table>
