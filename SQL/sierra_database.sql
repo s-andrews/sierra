@@ -183,6 +183,7 @@ CREATE TABLE run (
 -- We should dynamically create these statements from the config file
 -- so we get the correct hostname.
 
+CREATE USER sierrauser@localhost IDENTIFIED BY "";
 GRANT INSERT,SELECT on sierra.* TO sierrauser@localhost;
 GRANT DELETE on sierra.password_reset TO sierrauser@localhost;
 GRANT DELETE on sierra.lane TO sierrauser@localhost;
