@@ -67,6 +67,14 @@ td input[type="text"]  {
   width: 95%;
 }
 
+tr.ready td {
+    background-color: #ccebe5;
+}
+
+tr.received td {
+    background-color: #fed9a6;
+}
+
 
 
 #menu {

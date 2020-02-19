@@ -5290,6 +5290,20 @@ sub show_queue {
       my $first_word = $run_type;
       $first_word =~ s/\s.*$//;
 
+      # We need to classify the samples.  The classification would be:
+
+      # Ready to sequence - has passed final QC
+      # Awaiting QC - received but no QC yet
+      # Not received
+
+      my $class = "";
+      if ($passed_qc) {
+	$class="ready";
+      }
+      elsif ($received) {
+	$class="received";
+      }
+
       push @{$tables{$first_word}}, {
 			     SAMPLE_ID => $id,
 			     NAME => $name,
@@ -5300,6 +5314,7 @@ sub show_queue {
 			     LANES_RUN => $lane_count,
 			     IS_ADMIN => 1,
 			     OWNER => "$first_name $last_name",
+			     CLASS => $class,
 			    };
 
       

@@ -28,7 +28,7 @@
     <!-- TMPL_IF NAME=ACTIVE_SAMPLES -->
 
     <!-- TMPL_LOOP NAME=ACTIVE_SAMPLES -->
-    <tr>
+    <tr class="<!-- TMPL_VAR NAME=CLASS ESCAPE=HTML -->">
       <td><a href="sierra.pl?action=view_sample&amp;sample_id=<!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML -->">Sample <!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML --></a></td>
       <td><!-- TMPL_VAR NAME=NAME ESCAPE=HTML --></td>
       <td><!-- TMPL_VAR NAME=OWNER ESCAPE=HTML --></td>
