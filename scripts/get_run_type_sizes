@@ -2,7 +2,7 @@
 
 ##########################################################################
 #                                                                        #
-# Copyright 2013-19, Simon Andrews (simon.andrews@babraham.ac.uk)        #
+# Copyright 2013-20, Simon Andrews (simon.andrews@babraham.ac.uk)        #
 #                                                                        #
 # This file is part of Sierra.                                           #
 #                                                                        #
@@ -137,29 +137,24 @@ sub get_lane_size {
 
 __DATA__
 
-check_for_new_results
+get_run_type_sizes
 
 NAME
 
-  check_for_new_results - Notify users of newly added results
+  get_run_type_sizes - How big are different run types?
 
 SYNOPSIS
 
-  check_for_new_results [--interval 48]
+  get_run_type_sizes > output.txt
 
 DESCRIPTION
 
-  This script goes through all runs in sierra system and looks
-  for any files which have been recently added.  It then notifies
-  the people who submitted modified samples that there is new 
-  data for them to look at.  It is designed to be run as a cron
-  job on the sierra server so that it goes through the data each
-  night.
+  This script goes through all of the lanes for the last
+  two years and finds out how big each of them is (in GB).
+  It then reports this along with the sample and run type
+  to STDOUT so that this information can be collated.
 
   Options which can be applied are:
-
-  -i --interval  Say how recently (in hours) a file must have
-                 been modified to include it in the report.
 
   -q --quiet     Supresses all progress information and only
                  produces output in the event of an error.
@@ -174,9 +169,8 @@ AUTHOR
 
 REPORTING BUGS
 
-  Please report any bugs to our bugzilla instance at:
+  Please report any bugs to our github issues page:
 
-  www.bioinformatics.babraham.ac.uk/bugzilla/
+  https://github.com/s-andrews/sierra/issues
 
-  Bugs should be filed under the Sierra product.
 
