@@ -18,6 +18,27 @@
       <th>Flowcell Serial Number</th>
       <td><input type="text" name="serial_number" value="<!-- TMPL_VAR NAME=SERIAL_NUMBER ESCAPE=HTML -->"></td>
     </tr>
+    <tr>
+      <th>Run Date</th>
+      <td>
+	<select name="day">
+	  <!-- TMPL_LOOP NAME=DAYS -->
+	  <option <!-- TMPL_IF NAME=SELECTED -->selected<!-- /TMPL_IF -->><!-- TMPL_VAR NAME=NAME ESCAPE=HTML --></option>
+	  <!-- /TMPL_LOOP -->
+	</select> 
+	<select name="month">
+	  <!-- TMPL_LOOP NAME=MONTHS -->
+	  <option value="<!-- TMPL_VAR NAME=NUMBER ESCAPE=HTML -->" <!-- TMPL_IF NAME=SELECTED -->selected<!-- /TMPL_IF -->><!-- TMPL_VAR NAME=NAME ESCAPE=HTML --></option>
+	  <!-- /TMPL_LOOP -->
+	</select> 
+	<select name="year">
+	  <!-- TMPL_LOOP NAME=YEARS -->
+	  <option <!-- TMPL_IF NAME=SELECTED -->selected<!-- /TMPL_IF -->><!-- TMPL_VAR NAME=YEAR ESCAPE=HTML --></option>
+	  <!-- /TMPL_LOOP -->
+	</select>
+      </td>
+    </tr>
+
   </table>
   <p class="center">
     <input type="submit" value="Submit changes">

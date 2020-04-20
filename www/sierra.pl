@@ -3877,9 +3877,9 @@ sub edit_flowcell {
 
     my $flowcell_id = $q->param("flowcell_id");
 
-    my ($id,$serial,$run_folder) = $dbh->selectrow_array("SELECT flowcell.id, flowcell.serial_number, run.run_folder_name FROM flowcell,run WHERE flowcell.id=? AND run.flowcell_id=flowcell.id",undef,($flowcell_id));
+    my ($id,$serial,$run_folder, $run_date) = $dbh->selectrow_array("SELECT flowcell.id, flowcell.serial_number, run.run_folder_name,run.date FROM flowcell,run WHERE flowcell.id=? AND run.flowcell_id=flowcell.id",undef,($flowcell_id));
     unless ($id) {
-	print_bug("Couldn't find a run flowcell with id $flowcell_id".$dbh->errstr());
+	print_bug("Couldn't find a run flowcell with id $flowcell_id: ".$dbh->errstr());
 	return;
     }
 
@@ -3888,6 +3888,63 @@ sub edit_flowcell {
 	SERIAL_NUMBER => $serial,
 	RUN_FOLDER_NAME => $run_folder,
 	);
+
+    my ($run_year,$run_month, $run_day) = split(/-/,$run_date);
+
+
+    my @days;
+    for my $day (1..31) {
+	if ($day == $run_day) {
+	    push @days, {NAME => $day,SELECTED => 1};
+	}
+	else {
+	    push @days, {NAME => $day};
+	}
+    }
+    
+    $template->param(DAYS => \@days);
+
+    my @months = (
+	[1,'Jan'],
+	[2,'Feb'],
+	[3,'Mar'],
+	[4,'Apr'],
+	[5,'May'],
+	[6,'Jun'],
+	[7,'Jul'],
+	[8,'Aug'],
+	[9,'Sep'],
+	[10,'Oct'],
+	[11,'Nov'],
+	[12,'Dec'],
+	);
+    
+    my @template_months;
+    foreach my $month (@months) {
+	if ($month->[0] == $run_month) {
+	    push @template_months,{NUMBER=>$month->[0],NAME=>$month->[1],SELECTED=>1};
+	}
+	else {
+	    push @template_months,{NUMBER=>$month->[0],NAME=>$month->[1]};
+	}
+	
+    }
+    $template -> param(MONTHS => \@template_months);
+
+    my @years;
+
+    for my $year (2009..(localtime())[5]+1900) {
+
+	if ($year == $run_year) {
+	    push @years, {YEAR => $year,SELECTED => 1};
+	}
+	else {
+	    push @years, {YEAR => $year};
+	}
+
+    }
+
+    $template->param(YEARS=>\@years);
 
   
     print $session->header();
@@ -3923,6 +3980,24 @@ sub finish_edit_flowcell {
 	return;
     }
 
+  # Get the date
+  my $day = $q -> param("day");
+  my $month = $q -> param("month");
+  my $year = $q -> param("year");
+
+  # Check if this is valid
+  if (!check_date($year,$month,$day)) {
+    print_error("Date $year-$month-$day doesn't appear to be a valid date");
+    return;
+  }
+
+  if (Delta_Days(Today(),$year,$month,$day) > 1) {
+    print_error("Your run date appears to be more than one day in the future");
+    return;
+  }
+
+  my $date = sprintf("%d-%02d-%02d",$year,$month,$day);
+
 
     # We need to update the flowcell details
     $dbh->do("UPDATE flowcell SET serial_number=? WHERE id=?",undef,($serial_number,$flowcell_id)) or do {
@@ -3932,7 +4007,7 @@ sub finish_edit_flowcell {
 
 
     # We need to update the run details
-    $dbh->do("UPDATE run SET run_folder_name=? WHERE flowcell_id=?",undef,($run_folder,$flowcell_id)) or do {
+    $dbh->do("UPDATE run SET run_folder_name=?, date=? WHERE flowcell_id=?",undef,($run_folder,$date,$flowcell_id)) or do {
 	print_bug("Failed to update run folder name for flowcell '$flowcell_id'".$dbh->errstr());
 	return;
     };
