@@ -189,7 +189,9 @@ if ($session->param("person_id")) {
     elsif ($action eq 'finish_edit_flowcell') {
       finish_edit_flowcell();
     }
-
+    elsif ($action eq 'delete_flowcell') {
+      delete_flowcell();
+    }
     elsif ($action eq 'remove_sample') {
       remove_sample();
     }
@@ -4013,6 +4015,64 @@ sub finish_edit_flowcell {
     };
 
     print $q->redirect("sierra.pl?action=view_flowcell&flowcell_id=$flowcell_id");
+
+}
+
+sub delete_flowcell {
+
+    unless ($session -> param("is_admin")) {
+	print_bug("Only admins can view this page and you don't appear to be one");
+	return;
+    }
+
+    my $flowcell_id = $q->param("flowcell_id");
+
+    unless ($flowcell_id =~ /^\d+$/) {
+	print_bug("Flowcell id should be an integer, not '$flowcell_id'");
+	return;
+    }
+
+    # Check that this flowcell doesn't already have a run associated with
+    # it (since we can't change it if it has)
+
+    my ($run_id) = $dbh->selectrow_array("SELECT id FROM run WHERE flowcell_id=?",undef,($flowcell_id));
+
+    if ($run_id) {
+	print_bug("Can't delete this flowcell as it has has already been run (with run id $run_id)");
+	return;
+    }
+
+    # We need to remove any samples which have been added as lanes
+    # to this flowcell.
+
+    my $get_lanes_sth = $dbh->prepare("SELECT id, sample_id FROM lane where flowcell_id=?");
+
+    $get_lanes_sth -> execute($flowcell_id) or do {
+	print_bug("Couldn't list samples for flowcell $flowcell_id: ".$dbh->errstr());
+	return;
+    };
+
+    while (my ($lane_id,$sample_id) = $get_lanes_sth->fetchrow_array()) {
+	$dbh-> do ("DELETE FROM lane WHERE id=?",undef,($lane_id)) or do {
+	    print_bug("Failed to delete lane $lane_id:".$dbh->errstr());
+	    return;
+	};
+	
+	# Unset the complete flag on the sample it came from
+	$dbh -> do("UPDATE sample SET is_complete=0 WHERE id=?",undef,($sample_id)) or do {
+	    print_bug("Failed to reset complete flag on sample $sample_id:".$dbh->errstr());
+	    return;
+	};
+    }
+
+    # Now we can delete the flowcell itself
+    $dbh->do("DELETE from flowcell where id=?",undef,($flowcell_id)) or do {
+	print_bug("Failed to delete flowcell $flowcell_id: ".$dbh->errstr());
+	return;
+    };
+
+    # Return them to the front screen where they came from
+    print $q->redirect("sierra.pl#pending");
 
 }
 

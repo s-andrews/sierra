@@ -189,7 +189,7 @@ GRANT DELETE on sierra.password_reset TO sierrauser@localhost;
 GRANT DELETE on sierra.lane TO sierrauser@localhost;
 GRANT UPDATE on sierra.person TO sierrauser@localhost;
 GRANT UPDATE on sierra.sample TO sierrauser@localhost;
-GRANT UPDATE on sierra.flowcell TO sierrauser@localhost;
+GRANT UPDATE,DELETE on sierra.flowcell TO sierrauser@localhost;
 GRANT UPDATE on sierra.instrument TO sierrauser@localhost;
 GRANT DELETE on sierra.run_type_instrument TO sierrauser@localhost;
 GRANT UPDATE on sierra.run_type TO sierrauser@localhost;

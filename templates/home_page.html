@@ -175,22 +175,27 @@
     <!-- /TMPL_IF -->
   </table>
 
-  <h2>Pending Flowcells</h2>
+  <h2 id="pending">Pending Flowcells</h2>
 
   <table>
     <tr>
       <th>Flowcell ID</th>
       <th>Serial Number</th>
       <th>Run Type</th>
+      <th>Edit</th>
+      <th>Delete</th>
     </tr>
 
     <!-- TMPL_IF NAME=PENDING_FLOWCELLS -->
 
     <!-- TMPL_LOOP NAME=PENDING_FLOWCELLS -->
     <tr>
-      <td><a href="sierra.pl?action=new_flowcell&amp;flowcell_id=<!-- TMPL_VAR NAME=FLOWCELL_ID ESCAPE=HTML -->">Flowcell <!-- TMPL_VAR NAME=FLOWCELL_ID ESCAPE=HTML --></a></td>
+      <td>Flowcell <!-- TMPL_VAR NAME=FLOWCELL_ID ESCAPE=HTML --></td>
       <td><!-- TMPL_VAR NAME=SERIAL ESCAPE=HTML --></td>
       <td><!-- TMPL_VAR NAME=RUN_TYPE ESCAPE=HTML --></td>
+      <td><a href="sierra.pl?action=new_flowcell&amp;flowcell_id=<!-- TMPL_VAR NAME=FLOWCELL_ID ESCAPE=HTML -->">Edit</a></td>
+      <td><a href="sierra.pl?action=delete_flowcell&amp;flowcell_id=<!-- TMPL_VAR NAME=FLOWCELL_ID ESCAPE=HTML -->" onclick="return confirm('Are you sure you want to delete flowcell <!-- TMPL_VAR NAME=FLOWCELL_ID ESCAPE=HTML -->?')">Delete</a></td>
+
     </tr>
     <!-- /TMPL_LOOP -->
 
