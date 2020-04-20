@@ -193,6 +193,7 @@ GRANT UPDATE on sierra.flowcell TO sierrauser@localhost;
 GRANT UPDATE on sierra.instrument TO sierrauser@localhost;
 GRANT DELETE on sierra.run_type_instrument TO sierrauser@localhost;
 GRANT UPDATE on sierra.run_type TO sierrauser@localhost;
+GRANT UPDATE on sierra.run TO sierrauser@localhost;
 GRANT UPDATE on sierra.sample_type TO sierrauser@localhost;
 GRANT UPDATE on sierra.search_database TO sierrauser@localhost;
 GRANT DELETE on sierra.person_permission TO sierrauser@localhost;

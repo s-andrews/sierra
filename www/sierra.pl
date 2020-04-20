@@ -2,7 +2,7 @@
 
 ##########################################################################
 #                                                                        #
-# Copyright 2011-15, Simon Andrews (simon.andrews@babraham.ac.uk)        #
+# Copyright 2011-20, Simon Andrews (simon.andrews@babraham.ac.uk)        #
 #                                                                        #
 # This file is part of Sierra.                                           #
 #                                                                        #
@@ -183,6 +183,13 @@ if ($session->param("person_id")) {
     elsif ($action eq 'new_flowcell' or $action eq 'view_flowcell') {
       new_flowcell();
     }
+    elsif ($action eq 'edit_flowcell') {
+      edit_flowcell();
+    }
+    elsif ($action eq 'finish_edit_flowcell') {
+      finish_edit_flowcell();
+    }
+
     elsif ($action eq 'remove_sample') {
       remove_sample();
     }
@@ -3849,13 +3856,92 @@ sub new_flowcell {
     }
   }
 
-
-
-
   print $session->header();
   print $template -> output();
 
 }
+
+
+sub edit_flowcell {
+
+    # This can only ever be called for flowcells which have
+    # been run already.  We don't let them change much about
+    # this.  Only the flowcell ID and the run folder name.
+
+    unless ($session -> param("is_admin")) {
+	print_bug("Only admins can view this page and you don't appear to be one");
+	return;
+    }
+
+    my $template = HTML::Template -> new (filename=>'edit_flowcell.html',associate => $session);
+
+    my $flowcell_id = $q->param("flowcell_id");
+
+    my ($id,$serial,$run_folder) = $dbh->selectrow_array("SELECT flowcell.id, flowcell.serial_number, run.run_folder_name FROM flowcell,run WHERE flowcell.id=? AND run.flowcell_id=flowcell.id",undef,($flowcell_id));
+    unless ($id) {
+	print_bug("Couldn't find a run flowcell with id $flowcell_id".$dbh->errstr());
+	return;
+    }
+
+    $template -> param (
+	FLOWCELL_ID => $flowcell_id,
+	SERIAL_NUMBER => $serial,
+	RUN_FOLDER_NAME => $run_folder,
+	);
+
+  
+    print $session->header();
+    print $template -> output();
+
+}
+
+sub finish_edit_flowcell {
+
+    unless ($session -> param("is_admin")) {
+	print_bug("Only admins can view this page and you don't appear to be one");
+	return;
+    }
+
+    my $flowcell_id = $q->param("flowcell_id");
+
+    unless ($flowcell_id =~ /^\d+$/) {
+	print_bug("Flowcell id should be an integer, not '$flowcell_id'");
+	return;
+    }
+
+    # Get the run folder name
+    my $run_folder = $q->param("run_folder");
+    unless ($run_folder) {
+	print_error("No run folder name was supplied");
+	return;
+    }
+
+    # Get the flowcell serial number
+    my $serial_number = $q->param("serial_number");
+    unless ($serial_number) {
+	print_error("No serial number was supplied");
+	return;
+    }
+
+
+    # We need to update the flowcell details
+    $dbh->do("UPDATE flowcell SET serial_number=? WHERE id=?",undef,($serial_number,$flowcell_id)) or do {
+	print_bug("Failed to update serial number for flowcell '$flowcell_id'".$dbh->errstr());
+	return;
+    };
+
+
+    # We need to update the run details
+    $dbh->do("UPDATE run SET run_folder_name=? WHERE flowcell_id=?",undef,($run_folder,$flowcell_id)) or do {
+	print_bug("Failed to update run folder name for flowcell '$flowcell_id'".$dbh->errstr());
+	return;
+    };
+
+    print $q->redirect("sierra.pl?action=view_flowcell&flowcell_id=$flowcell_id");
+
+}
+
+
 
 sub add_lane {
 

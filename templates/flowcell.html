@@ -38,7 +38,19 @@
       <td><!-- TMPL_VAR NAME=MACHINE ESCAPE=HTML --></td>
   </table>
 
+  <form method="GET" action="sierra.pl">
+    <p class="center">
+      <input type="hidden" name="action" value="edit_flowcell">
+      <input type="hidden" name="flowcell_id" value="<!-- TMPL_VAR NAME=FLOWCELL_ID ESCAPE=HTML -->">
+      <input type="submit" value="Edit Flowcell">
+    </p>
+  </form>
+
+
   <!-- /TMPL_IF -->
+
+
+
 
   <h3>Samples</h3>
 
