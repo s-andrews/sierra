@@ -1,0 +1,176 @@
+#!/usr/bin/perl
+
+##########################################################################
+#                                                                        #
+# Copyright 2013-20, Simon Andrews (simon.andrews@babraham.ac.uk)        #
+#                                                                        #
+# This file is part of Sierra.                                           #
+#                                                                        #
+# Sierra is free software: you can redistribute it and/or modify         #
+# it under the terms of the GNU General Public License as published by   #
+# the Free Software Foundation, either version 3 of the License, or      #
+# (at your option) any later version.                                    #
+#                                                                        #
+# Sierra is distributed in the hope that it will be useful,              #
+# but WITHOUT ANY WARRANTY; without even the implied warranty of         #
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the          #
+# GNU General Public License for more details.                           #
+#                                                                        #
+# You should have received a copy of the GNU General Public License      #
+# along with Sierra.  If not, see <http://www.gnu.org/licenses/>.        #
+##########################################################################
+
+use warnings;
+use strict;
+use DBI;
+use FindBin qw($Bin);
+use lib "$Bin/../source";
+use Sierra::Constants;
+use Sierra::IlluminaRun;
+use Getopt::Long;
+use File::Copy;
+use HTML::Template;
+use Net::SMTP;
+
+my $CHECK_DATA_VERSION = "0.3";
+
+chdir ("$Bin/../templates") or die "Can't move to templates directory: $!";
+
+# Collect the options the user has supplied.
+
+my $interval;
+my $quiet;
+my $help;
+my $version;
+
+
+my $result = GetOptions("interval=i" => \$interval,
+			"quiet"    => \$quiet,
+			"help"     => \$help,
+			"version"  => \$version,
+		       );
+die "Failed to process options" unless ($result);
+
+if ($help) {
+  print while (<DATA>);
+  exit;
+}
+
+if ($version) {
+  print "check_for_new_results version $CHECK_DATA_VERSION from Sierra $Sierra::Constants::SIERRA_VERSION\n";
+  exit;
+}
+
+# We set a default interval if they've not supplied one
+$interval = 24 unless ($interval);
+
+
+# Now we can start going through the runs to get their sizes
+
+# We can now try to connect to the database
+my $dbh = DBI->connect("DBI:mysql:database=$Sierra::Constants::DB_NAME;host=$Sierra::Constants::DB_SERVER",$Sierra::Constants::DB_USERNAME,$Sierra::Constants::DB_PASSWORD,{RaiseError=>0,AutoCommit=>1});
+
+unless ($dbh) {
+  die ("Couldn't connect to Sierra database: ".$DBI::errstr);
+}
+
+# Go through the recent lanes.  We're going to get everything for the last 2 years.  We're
+# going to collect the sample and run types since these are the combinations we care about
+# and we'll calculate the sizes of the files for each of them.
+
+my $all_lanes_sth = $dbh->prepare("select lane.id, lane.lane_number,  sample.users_sample_name, sample_type.name , run_type.name, run.run_folder_name
+from 
+lane, sample, sample_type, run_type, flowcell, run 
+where lane.sample_id = sample.id and sample.sample_type_id = sample_type.id and sample.run_type_id = run_type.id and lane.flowcell_id=flowcell.id and flowcell.run_id=run.id and run.date > NOW()-INTERVAL 2 YEAR;");
+
+$all_lanes_sth->execute() or die "Failed to get list of runs: ".$dbh->errstr()."\n";
+
+  print join("\t","lane_id","lane_number","name","sample_type","run_type","folder","size"),"\n";
+
+
+while (my ($lane_id,$lane_number,$name, $sample_type, $run_type, $folder) = $all_lanes_sth->fetchrow_array()) {
+
+  unless ($quiet) {
+    warn "Checking $name in  $folder which is $sample_type run on $run_type\n";
+  }
+
+  my $size = get_lane_size($folder,$lane_number);
+
+  print join("\t",$lane_id,$lane_number,$name,$sample_type,$run_type,$folder,$size),"\n";
+
+}
+
+
+
+
+
+sub get_lane_size {
+
+  my ($folder,$lane_number) = @_;
+
+  my $run_obj = Sierra::IlluminaRun->new($folder);
+
+  die "Couldn't make run object from '$folder'\n" unless ($run_obj);
+
+  my @results_folders = $run_obj->get_results_folders();
+
+  my $total_size = 0;
+
+  foreach my $results_folder (@results_folders) {
+
+    my $lane = $run_obj -> get_lane($lane_number);
+    my @files = $results_folder -> get_files_for_lane($lane);
+
+
+    foreach my $file (@files) {
+      $total_size += (stat($file->path()))[7];
+    }
+  }
+  
+  return ($total_size / 1024**3); # GB
+
+
+}
+
+
+
+
+__DATA__
+
+get_run_type_sizes
+
+NAME
+
+  get_run_type_sizes - How big are different run types?
+
+SYNOPSIS
+
+  get_run_type_sizes > output.txt
+
+DESCRIPTION
+
+  This script goes through all of the lanes for the last
+  two years and finds out how big each of them is (in GB).
+  It then reports this along with the sample and run type
+  to STDOUT so that this information can be collated.
+
+  Options which can be applied are:
+
+  -q --quiet     Supresses all progress information and only
+                 produces output in the event of an error.
+
+  -h --help      Print out help instructions and exit.
+
+  -v --version   Print the program version and exit.
+
+AUTHOR
+
+  Written by Simon Andrews (simon.andrews@babraham.ac.uk)
+
+REPORTING BUGS
+
+  Please report any bugs to our github issues page:
+
+  https://github.com/s-andrews/sierra/issues
+
+
