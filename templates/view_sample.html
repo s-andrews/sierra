@@ -146,6 +146,13 @@
     <p><!-- TMPL_VAR NAME=TEXT ESCAPE=HTML --></p>
     <!-- /TMPL_LOOP -->
 
+    <!-- TMPL_IF NAME=FILENAME -->
+    <p><strong>Attached file: </strong><a href="sierra.pl/<!-- TMPL_VAR NAME=VIEWNAME ESCAPE=URL -->?action=show_note_file&amp;sample_id=<!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML -->&amp;filename=<!-- TMPL_VAR NAME=FILENAME ESCAPE=URL -->"><!-- TMPL_VAR NAME=VIEWNAME ESCAPE=HTML --></a></p>
+
+
+    <!-- /TMPL_IF -->
+
+
   </div>
   <!-- /TMPL_LOOP -->
   <!-- TMPL_ELSE -->

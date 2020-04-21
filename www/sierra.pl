@@ -132,6 +132,9 @@ if ($session->param("person_id")) {
     elsif ($action eq 'add_note') {
       add_note();
     }
+    elsif ($action eq 'show_note_file') {
+      show_note_file();
+    }
     elsif ($action eq 'change_details') {
       start_change_details();
     }
@@ -2434,7 +2437,7 @@ sub view_sample {
 
 
   # Now add any notes
-  my $notes_sth = $dbh->prepare("SELECT person.first_name,person.last_name,DATE_FORMAT(sample_note.date,'%e %b %Y'),sample_note.note FROM sample_note,person WHERE sample_note.sample_id=? AND sample_note.person_id=person.id ORDER BY sample_note.date");
+  my $notes_sth = $dbh->prepare("SELECT person.first_name,person.last_name,DATE_FORMAT(sample_note.date,'%e %b %Y'),sample_note.note, sample_note.filename FROM sample_note,person WHERE sample_note.sample_id=? AND sample_note.person_id=person.id ORDER BY sample_note.date");
 
   $notes_sth -> execute($sample_id) or do {
     print_bug("Can't get notes for sample '$sample_id': ".$dbh->errstr());
@@ -2442,14 +2445,23 @@ sub view_sample {
   };
 
   my @notes;
-  while (my ($first,$last,$date,$text) = $notes_sth->fetchrow_array()) {
+  while (my ($first,$last,$date,$text,$filename) = $notes_sth->fetchrow_array()) {
     my @paragraphs;
+
+    # The filename has a timestamp on the front.  We'll hide this
+    # when we show it to use the user.
+    my $viewname = $filename;
+    $viewname =~ s/^\d+_//;
+
     push @paragraphs, {TEXT => $_} foreach (split(/[\r\n]+/,$text));
     push @notes, {
 		  FIRST_NAME => $first,
 		  LAST_NAME => $last,
 		  DATE => $date,
 		  PARAGRAPHS => \@paragraphs,
+		  FILENAME => $filename,
+		  VIEWNAME => $viewname,
+		  SAMPLE_ID => $sample_id,
 		 };
   }
 
@@ -2683,6 +2695,78 @@ sub add_barcode {
 
   # Redirect them back to the edit sample page
   print $q->redirect("sierra.pl?action=edit_sample&sample_id=$sample_id");
+
+}
+
+sub show_note_file {
+
+  # Returns a file which was previously attached to a note
+
+  my $sample_id = $q -> param('sample_id');
+
+  unless ($sample_id =~ /^\d+$/) {
+      print_bug("Didn't look like a sample id");
+      return;
+  };
+
+
+  my $filename = $q -> param('filename');
+
+  unless ($filename =~ /^[\w\-._ ]+$/) {
+      print_error("Invalid file name");
+      return;
+  }
+
+
+  my $file_path = $Sierra::Constants::FILES_DIR . "/Sample${sample_id}/${filename}";
+
+
+  my $mime_type = 'text/plain';
+
+
+  my %overridden_types = (
+			  docx => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+			  pptx => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+			  xlsx => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+			  pl => 'text/plain',
+                          sh => 'text/plain',
+			  pzfx => 'application/x-graphpad-prism-pzfx',
+			 );
+
+  if ($filename =~ /\.(\w+)$/) {
+    my $extension = lc($1);
+
+    if (exists $overridden_types{$extension}) {
+      $mime_type = $overridden_types{$extension};
+    }
+    else {
+
+      open (MIME,'/etc/mime.types') or do{print_bug("Can't open MIME type file: $!"); return;};
+
+      while (<MIME>) {
+	chomp;
+	my ($type,$ext) = split(/\s+/);
+	next unless ($ext);
+
+	if ($ext eq $extension) {
+	  $mime_type = $type;
+	  last;
+	}
+      }
+
+      close MIME;
+    }
+  }
+
+  open (FILE,$file_path) or do {print_bug("Can't read $file_path: $!");return;};
+
+  binmode FILE;
+
+  print "Content-type: $mime_type\n\n";
+
+  print while (<FILE>);
+
+  close FILE;
 
 }
 
@@ -3485,6 +3569,11 @@ sub add_note {
 	  print_error("Uploaded filenames can only contain numbers, letters dashes underscores spaces and dots");
 	  return;
       }
+
+      # To make sure we have unique filenames we prepend the current
+      # timestamp to the name.
+
+      $filename = time()."_".$filename;
 
       # Check to see if there's a folder for this sample already
       my $folder_to_save_to = $Sierra::Constants::FILES_DIR . "/Sample$sample_id";
