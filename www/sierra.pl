@@ -3475,12 +3475,56 @@ sub add_note {
     return;
   }
 
+  # See if they attached a file
+  my $filename = $q->param('attachment');
+
+  # If there is a filename then we'll retrieve the data and
+  # save it under the appropriate sample folder.
+  if ($filename) {
+      unless ($filename =~ /^[\w\-._ ]+$/) {
+	  print_error("Uploaded filenames can only contain numbers, letters dashes underscores spaces and dots");
+	  return;
+      }
+
+      # Check to see if there's a folder for this sample already
+      my $folder_to_save_to = $Sierra::Constants::FILES_DIR . "/Sample$sample_id";
+
+      unless (-e $folder_to_save_to) {
+	  mkdir($folder_to_save_to) or do {
+	      print_bug("Couldn't create '$folder_to_save_to': $!");
+	      return();
+	  };
+      }
+
+      my $fh = $q -> upload('attachment');
+
+      binmode($fh);
+
+      open (ATT, ">","${folder_to_save_to}/${filename}") or do {
+	  print_bug("Couldn't save to '${folder_to_save_to}/${filename}': $!");
+	  return;
+      };
+
+      binmode(ATT);
+      
+      print ATT while (<$fh>);
+
+      close ATT or do {
+	  print_bug("Couldn't write to '${folder_to_save_to}/${filename}': $!");
+	  return;
+      };
+
+  }
+  else {
+      $filename = undef;
+  }
+
 
   my $note_text = $q->param("note");
   if ($note_text) {
 
     # We can now create a note
-    $dbh->do("INSERT INTO sample_note (sample_id,person_id,date,note) values (?,?,NOW(),?)",undef,($sample_id,$session->param("person_id"),$note_text)) or do {
+    $dbh->do("INSERT INTO sample_note (sample_id,person_id,date,note,filename) values (?,?,NOW(),?,?)",undef,($sample_id,$session->param("person_id"),$note_text,$filename)) or do {
       print_bug("Couldn't insert note into sample: ".$dbh->errstr());
       return;
     }

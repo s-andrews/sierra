@@ -155,10 +155,12 @@
   <!-- TMPL_IF NAME=PERSON_ID -->
 
   <h3>Add new note</h3>
-  <form action="sierra.pl" method="POST">
+  <form action="sierra.pl" method="POST" enctype="multipart/form-data">
     <input type="hidden" name="action" value="add_note">
     <input type="hidden" name="sample_id" value="<!-- TMPL_VAR NAME=SAMPLE_ID -->">
     <textarea name="note" cols="40" rows="3"></textarea>
+    <p>Attach file: <input type="file" name="attachment" value="Attach file"></p>
+
     <p class="center"><input type="submit" value="Add Note"></p>
   </form>
   <!-- /TMPL_IF -->
