@@ -20,7 +20,8 @@
       <th>Owner</th>
       <th>Run type</th>
       <th>Received</th>
-      <th>Passed QC</th>
+      <th>Passed Individual QC</th>
+      <th>Passed Group QC</th>
       <th>Lanes Requested</th>
       <th>Lanes Run</th>
     </tr>
@@ -34,7 +35,26 @@
       <td><!-- TMPL_VAR NAME=OWNER ESCAPE=HTML --></td>
       <td><!-- TMPL_VAR NAME=RUN_TYPE ESCAPE=HTML --></td>
       <td><!-- TMPL_IF NAME=RECEIVED --><!-- TMPL_VAR NAME=RECEIVED ESCAPE=HTML --><!-- TMPL_ELSE --><!-- TMPL_IF NAME=IS_ADMIN --><a href="sierra.pl?action=receive_sample&amp;sample_id=<!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML -->">Receive</a><!-- TMPL_ELSE -->Not Yet Received<!-- /TMPL_IF--><!-- /TMPL_IF --></td>
-      <td><!-- TMPL_IF NAME=RECEIVED --><!-- TMPL_IF NAME=PASSED_QC --><!-- TMPL_VAR NAME=PASSED_QC ESCAPE=HTML --><!-- TMPL_ELSE --><!-- TMPL_IF NAME=IS_ADMIN --><a href="sierra.pl?action=pass_qc_sample&amp;sample_id=<!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML -->">Pass QC</a><!-- TMPL_ELSE -->Not Passed QC<!-- /TMPL_IF--><!-- /TMPL_IF --><!-- TMPL_ELSE -->Not Received<!-- /TMPL_IF --></td>
+      <td><!-- TMPL_IF NAME=RECEIVED --><!-- TMPL_IF NAME=PASSED_INDIVIDUAL_QC --><!-- TMPL_VAR NAME=PASSED_INDIVIDUAL_QC ESCAPE=HTML --><!-- TMPL_ELSE --><!-- TMPL_IF NAME=IS_ADMIN --><a href="sierra.pl?action=pass_individual_qc_sample&amp;sample_id=<!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML -->">Pass Individual QC</a><!-- TMPL_ELSE -->Not Passed QC<!-- /TMPL_IF--><!-- /TMPL_IF --><!-- TMPL_ELSE -->Not Received<!-- /TMPL_IF --></td>
+      <td>
+	<!-- TMPL_IF NAME=RECEIVED -->
+	  <!-- TMPL_IF NAME=PASSED_QC -->
+            <!-- TMPL_VAR NAME=PASSED_QC ESCAPE=HTML -->
+          <!-- TMPL_ELSE -->
+            <!-- TMPL_IF NAME=PASSED_INDIVIDUAL_QC -->
+              <!-- TMPL_IF NAME=IS_ADMIN -->
+                <a href="sierra.pl?action=pass_qc_sample&amp;sample_id=<!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML -->">Pass Group QC</a>
+              <!-- TMPL_ELSE -->
+                Not Passed QC
+              <!-- /TMPL_IF-->
+            <!-- TMPL_ELSE -->
+	      Not passed individual QC
+            <!-- /TMPL_IF -->
+
+          <!-- /TMPL_IF -->
+        <!-- TMPL_ELSE -->
+           Not Received
+        <!-- /TMPL_IF --></td>
       <td><!-- TMPL_VAR NAME=LANES_REQUESTED ESCAPE=HTML --></td>
       <td><!-- TMPL_VAR NAME=LANES_RUN ESCAPE=HTML --></td>
     </tr>

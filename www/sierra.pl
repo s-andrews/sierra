@@ -5618,7 +5618,7 @@ sub show_queue {
   # Admins get full details. Normal users see a reduced summary
 
   if ($session -> param("is_admin")) {
-    $active_samples_sth = $dbh->prepare("SELECT sample.id,sample.users_sample_name,sample.lanes_required,DATE_FORMAT(sample.received_date,'%e %b %Y'),DATE_FORMAT(sample.passed_qc_date,'%e %b %Y'),person.first_name,person.last_name,run_type.name FROM sample,person,run_type WHERE  sample.is_complete != 1 AND sample.person_id=person.id AND sample.run_type_id=run_type.id AND sample.is_suitable_control != 1 ORDER BY sample.submitted_date");
+    $active_samples_sth = $dbh->prepare("SELECT sample.id,sample.users_sample_name,sample.lanes_required,DATE_FORMAT(sample.received_date,'%e %b %Y'),DATE_FORMAT(sample.passed_individual_qc_date,'%e %b %Y'),DATE_FORMAT(sample.passed_qc_date,'%e %b %Y'),person.first_name,person.last_name,run_type.name FROM sample,person,run_type WHERE  sample.is_complete != 1 AND sample.person_id=person.id AND sample.run_type_id=run_type.id AND sample.is_suitable_control != 1 ORDER BY sample.submitted_date");
 
     $active_samples_sth -> execute() or do {
       print_bug("Couldn't get list of active admin samples: ".$dbh->errstr());
@@ -5632,7 +5632,7 @@ sub show_queue {
     # in the run type.
     my %tables;
     
-    while (my ($id,$name,$requested,$received,$passed_qc,$first_name,$last_name,$run_type)= $active_samples_sth->fetchrow_array()) {
+    while (my ($id,$name,$requested,$received,$passed_individual_qc,$passed_qc,$first_name,$last_name,$run_type)= $active_samples_sth->fetchrow_array()) {
 
       $lane_count_sth ->execute($id) or do {
 	print_bug("Couldn't count lanes run for sample '$id': ".$dbh->errstr());
@@ -5662,6 +5662,7 @@ sub show_queue {
 			     SAMPLE_ID => $id,
 			     NAME => $name,
 			     RECEIVED => $received,
+			     PASSED_INDIVIDUAL_QC => $passed_individual_qc,
 			     PASSED_QC => $passed_qc,
 			     LANES_REQUESTED => $requested,
 			     RUN_TYPE => $run_type,
