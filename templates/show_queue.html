@@ -19,6 +19,15 @@
     </tr>
   </table>
 
+  <table>
+    <tr>
+      <!-- TMPL_LOOP NAME=TABLES -->
+      <td><!-- TMPL_VAR NAME=TABLE_NAME ESCAPE=HTML --> <input type="checkbox" id="<!-- TMPL_VAR NAME=TABLE_NAME ESCAPE=HTML -->" checked></td>
+      <!-- /TMPL_LOOP -->
+
+    </tr>
+  </table>
+
   <script>
     $(document).ready(function(){
       $("#filter_notreceived").click(function(){
@@ -33,13 +42,23 @@
       $("#filter_combinedqc").click(function(){
         $("tr.ready").toggle();
       });
+
+      <!-- TMPL_LOOP NAME=TABLES -->
+
+      $("#<!-- TMPL_VAR NAME=TABLE_NAME ESCAPE=HTML -->").click(function(){
+        $("div.<!-- TMPL_VAR NAME=TABLE_NAME ESCAPE=HTML -->").toggle();
+      });
+
+      <!-- /TMPL_LOOP -->
+
     });
   </script>
 
 
 
   <!-- TMPL_LOOP NAME=TABLES -->
-
+  
+  <div class="<!-- TMPL_VAR NAME=TABLE_NAME ESCAPE=HTML -->">
   <h3 class="center"><!-- TMPL_VAR NAME=TABLE_NAME ESCAPE=HTML --></h3>
   
   <table class="fullwidth">
@@ -96,6 +115,7 @@
     <!-- /TMPL_IF -->
 
   </table>
+  </div>
 
   <!-- /TMPL_LOOP -->
   
