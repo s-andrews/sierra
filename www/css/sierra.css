@@ -67,15 +67,15 @@ td input[type="text"]  {
   width: 95%;
 }
 
-tr.ready td {
+td.ready, tr.ready td {
     background-color: #ccebe5;
 }
 
-tr.partqc td {
+td.partqc, tr.partqc td {
     background-color: #ebcce5;
 }
 
-tr.received td {
+td.received, tr.received td {
     background-color: #fed9a6;
 }
 

@@ -5709,6 +5709,9 @@ sub show_queue {
       elsif ($received) {
 	$class="received";
       }
+      else {
+	  $class="notreceived";
+      }
 
       push @{$tables{$first_word}}, {
 			     SAMPLE_ID => $id,

@@ -8,6 +8,35 @@
   <h2>Samples in the queue</h2>
 
   <!-- TMPL_IF NAME=IS_ADMIN -->
+  <h3 class="center">Show / Hide</h3>
+
+  <table>
+    <tr>
+      <td class="notreceived">Not Received <input type="checkbox" id="filter_notreceived" checked></td>
+      <td class="received">Received <input type="checkbox" id="filter_received" checked></td>
+      <td class="partqc">Passed Separate QC <input type="checkbox" id="filter_separateqc" checked></td>
+      <td class="ready">Passed Combined QC <input type="checkbox" id="filter_combinedqc" checked></td>
+    </tr>
+  </table>
+
+  <script>
+    $(document).ready(function(){
+      $("#filter_notreceived").click(function(){
+        $("tr.notreceived").toggle();
+      });
+      $("#filter_received").click(function(){
+        $("tr.received").toggle();
+      });
+      $("#filter_separateqc").click(function(){
+        $("tr.partqc").toggle();
+      });
+      $("#filter_combinedqc").click(function(){
+        $("tr.ready").toggle();
+      });
+    });
+  </script>
+
+
 
   <!-- TMPL_LOOP NAME=TABLES -->
 
