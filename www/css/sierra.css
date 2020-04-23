@@ -71,6 +71,10 @@ tr.ready td {
     background-color: #ccebe5;
 }
 
+tr.partqc td {
+    background-color: #ebcce5;
+}
+
 tr.received td {
     background-color: #fed9a6;
 }

@@ -5703,6 +5703,9 @@ sub show_queue {
       if ($passed_qc) {
 	$class="ready";
       }
+      elsif ($passed_individual_qc) {
+	$class="partqc";
+      }
       elsif ($received) {
 	$class="received";
       }
