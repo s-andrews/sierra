@@ -204,6 +204,9 @@ if ($session->param("person_id")) {
     elsif ($action eq 'receive_sample') {
       receive_sample();
     }
+    elsif ($action eq 'pass_individual_qc_sample') {
+      pass_individual_qc_sample();
+    }
     elsif ($action eq 'pass_qc_sample') {
       pass_qc_sample();
     }
@@ -3684,9 +3687,55 @@ sub pass_qc_sample {
     return;
   }
 
+  # Check that the sample has passed individual QC
+  my ($individual_date) = $dbh->selectrow_array("SELECT passed_individual_qc_date FROM sample WHERE id=?",undef,($sample_id));
+  unless ($individual_date) {
+    print_bug("Tried to pass QC on a sample ('$sample_id') which hasn't passed individual QC");
+    return;
+  }
+
   # Mark the sample as passing QC
   $dbh->do("UPDATE sample SET passed_qc_date=NOW() WHERE id=?",undef,($sample_id)) or do {
     print_bug("Can't flag sample '$sample_id' as passing qc: ".$dbh->errstr());
+    return;
+  };
+
+
+  # Now we can redraw the home screen
+  print $q->redirect("sierra.pl?action=show_queue");
+}
+
+sub pass_individual_qc_sample {
+
+  my $sample_id = $q -> param("sample_id");
+  unless ($sample_id and $sample_id =~ /^\d+$/) {
+    print_bug ("'$sample_id' didn't look like a real sample ID when adding a note");
+    return;
+  }
+
+  # Check that this is a real sample
+  my ($returned_id) = $dbh->selectrow_array("SELECT id FROM sample WHERE id=?",undef,($sample_id));
+  unless($returned_id) {
+    print_bug("Couldn't find a sample with id '$sample_id'");
+    return;
+  }
+
+  # Check the user is an admin (they need to be to do this)
+  unless ($session->param("is_admin")) {
+    print_bug("Only admins can receive samples,  Sorry.");
+    return;
+  }
+
+  # Check that the sample has been received
+  my ($received_date) = $dbh->selectrow_array("SELECT received_date FROM sample WHERE id=?",undef,($sample_id));
+  unless ($received_date) {
+    print_bug("Tried to pass individual QC on a sample ('$sample_id') which hasn't been received");
+    return;
+  }
+
+  # Mark the sample as passing QC
+  $dbh->do("UPDATE sample SET passed_individual_qc_date=NOW() WHERE id=?",undef,($sample_id)) or do {
+    print_bug("Can't flag sample '$sample_id' as passing individual qc: ".$dbh->errstr());
     return;
   };
 
