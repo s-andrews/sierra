@@ -90,6 +90,7 @@ CREATE TABLE sample_note (
 	person_id INT,
 	date DATETIME,
 	note TEXT,
+	filename VARCHAR(200),
 	KEY (sample_id),
 	KEY (date)
 );
