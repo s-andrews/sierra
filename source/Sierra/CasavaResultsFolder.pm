@@ -2,7 +2,7 @@
 
 ##########################################################################
 #                                                                        #
-# Copyright 2011-19, Simon Andrews (simon.andrews@babraham.ac.uk)        #
+# Copyright 2011-13, Simon Andrews (simon.andrews@babraham.ac.uk)        #
 #                                                                        #
 # This file is part of Sierra.                                           #
 #                                                                        #
@@ -303,11 +303,6 @@ sub get_files_for_lane {
     # Trimming reports
     elsif ($name =~ /trimming_report.txt$/) {
       push @files, new Sierra::ResultFile($name,$file,'Adapter trimming report','text/plain');
-    }
-
-    # SNPsplit files
-    elsif ($name =~ /SNPsplit_report.txt$/ or $name =~ /SNPsplit_sort.txt$/) {
-	push @files, new Sierra::ResultFile($name,$file,'SNPsplit reports','text/plain');
     }
 
 

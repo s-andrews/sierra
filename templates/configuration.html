@@ -102,37 +102,7 @@
     <p class="center"><input type="submit" value="Add new adapter type"></p>
   </form>
 
-<h2 id="library_prep_types">Library Prep Types</h2>
 
-  <table>
-    <tr>
-      <th>Library prep ID</th>
-      <th>Name</th>
-      <th>requires library prep</th>
-      <th>Retired</th>
-      <th>Edit</th>
-    </tr>
-    <!-- TMPL_IF NAME=LIBRARY_PREP_TYPES -->
-    <!-- TMPL_LOOP NAME=LIBRARY_PREP_TYPES -->
-    <tr>
-      <td><!-- TMPL_VAR NAME=LIBRARY_PREP_TYPE_ID ESCAPE=HTML --></td>
-      <td><!-- TMPL_VAR NAME=NAME ESCAPE=HTML--></td>
-      <td><!-- TMPL_IF NAME=REQUIRES_PREP -->Yes<!-- TMPL_ELSE -->No<!-- /TMPL_IF --></td>
-      <td><!-- TMPL_IF NAME=RETIRED -->Yes<!-- TMPL_ELSE -->No<!-- /TMPL_IF --></td>
-      <td><a href="sierra.pl?action=edit_library_prep_type&amp;library_prep_type_id=<!-- TMPL_VAR NAME=LIBRARY_PREP_TYPE_ID ESCAPE=HTML -->">Edit</a> </td>
-    </tr>
-    <!-- /TMPL_LOOP -->
-    <!-- TMPL_ELSE -->
-    <tr>
-      <td colspan="5" class="center">No available library prep types</td>
-    </tr>
-    <!-- /TMPL_IF -->
-  </table> 
-
-  <form action="sierra.pl" method="GET">
-    <input type="hidden" name="action" value="edit_library_prep_type">
-    <p class="center"><input type="submit" value="Add new library prep type"></p>
-  </form>
 
   <h2 id="sample_types">Sample Types</h2>
 
