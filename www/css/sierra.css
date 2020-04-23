@@ -33,6 +33,10 @@ table {
   text-align: center;
 }
 
+table.fullwidth {
+    width: 90%;
+}
+
 th { 
   text-align: center;
   background-color: #326B30;
@@ -53,9 +57,22 @@ td.center {
   text-align: center;
 }
 
+td.barcode {
+    font-family: monospace;
+    font-size: 90%;
+}
+
 
 td input[type="text"]  { 
   width: 95%;
+}
+
+tr.ready td {
+    background-color: #ccebe5;
+}
+
+tr.received td {
+    background-color: #fed9a6;
 }
 
 

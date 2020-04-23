@@ -2,7 +2,7 @@
 
 ##########################################################################
 #                                                                        #
-# Copyright 2013-14, Simon Andrews (simon.andrews@babraham.ac.uk)        #
+# Copyright 2013-19, Simon Andrews (simon.andrews@babraham.ac.uk)        #
 #                                                                        #
 # This file is part of Sierra.                                           #
 #                                                                        #
@@ -83,9 +83,11 @@ unless ($dbh) {
   die ("Couldn't connect to Sierra database: ".$DBI::errstr);
 }
 
-# Go through the full list of runs and process them all
+# Go through the runs.  We've got so many now that it doesn't make sense to
+# go through all of them.  If we limit ourselves to the last 100 runs then
+# that should catch anything which is changing in a relevant way.
 
-my $all_runs_sth = $dbh->prepare("SELECT id,run_folder_name FROM run order by id DESC");
+my $all_runs_sth = $dbh->prepare("SELECT id,run_folder_name FROM run order by id DESC LIMIT 100");
 
 $all_runs_sth->execute() or die "Failed to get list of runs: ".$dbh->errstr()."\n";
 

@@ -54,7 +54,7 @@
     </tr>
     <tr>
       <th>Date Passed QC</th>
-      <td><!-- TMPL_IF NAME=DATE_PASSED_QC --><!-- TMPL_VAR NAME=DATE_PASSED_QC ESCAPE=HTML --><!-- TMPL_ELSE --><!-- TMPL_IF NAME=IS_ACTIVE -->Not passed<!-- TMPL_ELSE -->Failed QC<!-- /TMPL_IF --><!-- /TMPL_IF --></td>
+      <td><!-- TMPL_IF NAME=DATE_PASSED_QC --><!-- TMPL_VAR NAME=DATE_PASSED_QC ESCAPE=HTML --><!-- TMPL_ELSE --><!-- TMPL_IF NAME=IS_ACTIVE -->Not passed<!-- TMPL_ELSE -->Abandoned<!-- /TMPL_IF --><!-- /TMPL_IF --></td>
     </tr>
     <tr>
       <th>Run Type</th>
@@ -91,8 +91,8 @@
 
     <!-- TMPL_LOOP NAME=BARCODES -->
     <tr>
-      <td><!-- TMPL_IF NAME=5PRIME --><!-- TMPL_VAR NAME=5PRIME ESCAPE=HTML --><!-- TMPL_ELSE -->[None]<!-- /TMPL_IF --></td>
-      <td><!-- TMPL_IF NAME=3PRIME --><!-- TMPL_VAR NAME=3PRIME ESCAPE=HTML --><!-- TMPL_ELSE -->[None]<!-- /TMPL_IF --></td>
+      <td class="barcode"><!-- TMPL_IF NAME=5PRIME --><!-- TMPL_VAR NAME=5PRIME ESCAPE=HTML --><!-- TMPL_ELSE -->[None]<!-- /TMPL_IF --></td>
+      <td class="barcode"><!-- TMPL_IF NAME=3PRIME --><!-- TMPL_VAR NAME=3PRIME ESCAPE=HTML --><!-- TMPL_ELSE -->[None]<!-- /TMPL_IF --></td>
       <td><!-- TMPL_VAR NAME=DESCRIPTION ESCAPE=HTML --></td>
     </tr>
     <!-- /TMPL_LOOP -->
@@ -150,6 +150,13 @@
     <p><!-- TMPL_VAR NAME=TEXT ESCAPE=HTML --></p>
     <!-- /TMPL_LOOP -->
 
+    <!-- TMPL_IF NAME=FILENAME -->
+    <p><strong>Attached file: </strong><a href="sierra.pl/<!-- TMPL_VAR NAME=VIEWNAME ESCAPE=URL -->?action=show_note_file&amp;sample_id=<!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML -->&amp;filename=<!-- TMPL_VAR NAME=FILENAME ESCAPE=URL -->"><!-- TMPL_VAR NAME=VIEWNAME ESCAPE=HTML --></a></p>
+
+
+    <!-- /TMPL_IF -->
+
+
   </div>
   <!-- /TMPL_LOOP -->
   <!-- TMPL_ELSE -->
@@ -159,10 +166,12 @@
   <!-- TMPL_IF NAME=PERSON_ID -->
 
   <h3>Add new note</h3>
-  <form action="sierra.pl" method="POST">
+  <form action="sierra.pl" method="POST" enctype="multipart/form-data">
     <input type="hidden" name="action" value="add_note">
     <input type="hidden" name="sample_id" value="<!-- TMPL_VAR NAME=SAMPLE_ID -->">
     <textarea name="note" cols="40" rows="3"></textarea>
+    <p>Attach file: <input type="file" name="attachment" value="Attach file"></p>
+
     <p class="center"><input type="submit" value="Add Note"></p>
   </form>
   <!-- /TMPL_IF -->

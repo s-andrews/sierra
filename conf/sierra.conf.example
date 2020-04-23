@@ -12,6 +12,13 @@ BASE_URL	http://www.example.com/sierra/sierra.pl
 
 TEMP_DIR	/tmp
 
+## FILES_DIR
+# A directory where file attachments to notes are saved.  
+# Shouldn't be under the document root and needs to be 
+# writable by whichever user your webserver runs as.
+
+FILES_DIR	/srv/sierra_files
+
 ## DB_SERVER
 # The hostname of the machine which hosts the sierra database.
 # If the database is hosted on the same machine as the web

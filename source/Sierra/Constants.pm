@@ -19,6 +19,7 @@ our $SIERRA_VERSION = "0.4 devel";
 
 our $BASE_URL;
 our $TEMP_DIR;
+our $FILES_DIR;
 our $DB_SERVER;
 our $DB_NAME;
 our $DB_USERNAME;
@@ -68,6 +69,15 @@ sub parse_conf_file {
       }
       $TEMP_DIR = $value;
     }
+
+
+    elsif ($name eq 'FILES_DIR') {
+      unless (-e $value and -d $value) {
+	die "Files folder '$value' doesn't exist";
+      }
+      $FILES_DIR = $value;
+    }
+
     elsif ($name eq 'DB_SERVER') {
       $DB_SERVER = $value;
     }

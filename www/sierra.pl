@@ -2,7 +2,7 @@
 
 ##########################################################################
 #                                                                        #
-# Copyright 2011-19, Simon Andrews (simon.andrews@babraham.ac.uk)        #
+# Copyright 2011-20, Simon Andrews (simon.andrews@babraham.ac.uk)        #
 #                                                                        #
 # This file is part of Sierra.                                           #
 #                                                                        #
@@ -132,6 +132,9 @@ if ($session->param("person_id")) {
     elsif ($action eq 'add_note') {
       add_note();
     }
+    elsif ($action eq 'show_note_file') {
+      show_note_file();
+    }
     elsif ($action eq 'change_details') {
       start_change_details();
     }
@@ -188,6 +191,15 @@ if ($session->param("person_id")) {
     }
     elsif ($action eq 'new_flowcell' or $action eq 'view_flowcell') {
       new_flowcell();
+    }
+    elsif ($action eq 'edit_flowcell') {
+      edit_flowcell();
+    }
+    elsif ($action eq 'finish_edit_flowcell') {
+      finish_edit_flowcell();
+    }
+    elsif ($action eq 'delete_flowcell') {
+      delete_flowcell();
     }
     elsif ($action eq 'remove_sample') {
       remove_sample();
@@ -2210,6 +2222,19 @@ sub view_lane {
 
   while (my ($id,$prime5,$prime3,$name) = $list_barcodes_sth->fetchrow_array()) {
     my $selected = 0;
+
+    # If we have multiple barcodes we'll only show the first one
+    # since that's what will be on the filename anyway and it makes
+    # things shorter and more manageable.
+
+    # To be consistent about which one we use we need to sort the
+    # barcodes we have.  On the filenames we always show the 
+    # 'lowest' one.
+
+
+    $prime5 = (sort{$a cmp $b} (split(/\:/,$prime5)))[0] if ($prime5);
+    $prime3 = (sort{$a cmp $b} (split(/\:/,$prime3)))[0] if ($prime3);
+
     if ($id == $barcode_id) {
       push @barcode_sequences, $prime5 if ($prime5);
       push @barcode_sequences, $prime3 if ($prime3);
@@ -2429,7 +2454,7 @@ sub view_sample {
 
 
   # Now add any notes
-  my $notes_sth = $dbh->prepare("SELECT person.first_name,person.last_name,DATE_FORMAT(sample_note.date,'%e %b %Y'),sample_note.note FROM sample_note,person WHERE sample_note.sample_id=? AND sample_note.person_id=person.id ORDER BY sample_note.date");
+  my $notes_sth = $dbh->prepare("SELECT person.first_name,person.last_name,DATE_FORMAT(sample_note.date,'%e %b %Y'),sample_note.note, sample_note.filename FROM sample_note,person WHERE sample_note.sample_id=? AND sample_note.person_id=person.id ORDER BY sample_note.date");
 
   $notes_sth -> execute($sample_id) or do {
     print_bug("Can't get notes for sample '$sample_id': ".$dbh->errstr());
@@ -2437,14 +2462,23 @@ sub view_sample {
   };
 
   my @notes;
-  while (my ($first,$last,$date,$text) = $notes_sth->fetchrow_array()) {
+  while (my ($first,$last,$date,$text,$filename) = $notes_sth->fetchrow_array()) {
     my @paragraphs;
+
+    # The filename has a timestamp on the front.  We'll hide this
+    # when we show it to use the user.
+    my $viewname = $filename;
+    $viewname =~ s/^\d+_//;
+
     push @paragraphs, {TEXT => $_} foreach (split(/[\r\n]+/,$text));
     push @notes, {
 		  FIRST_NAME => $first,
 		  LAST_NAME => $last,
 		  DATE => $date,
 		  PARAGRAPHS => \@paragraphs,
+		  FILENAME => $filename,
+		  VIEWNAME => $viewname,
+		  SAMPLE_ID => $sample_id,
 		 };
   }
 
@@ -2556,12 +2590,12 @@ sub add_barcode {
   $barcode5 = uc($barcode5);
   $barcode3 = uc($barcode3);
 
-  if ($barcode5 and $barcode5 !~ /^[GATC]+$/) {
+  if ($barcode5 and $barcode5 !~ /^[GATC\:]+$/) {
     # Try to look up the barcode as an alias
     $barcode5 = get_barcode_for_alias($barcode5);
   }
 
-  if ($barcode3 and $barcode3 !~ /^[GATC]+$/) {
+  if ($barcode3 and $barcode3 !~ /^[GATC\:]+$/) {
     # Try to look up the barcode as an alias
     $barcode3 = get_barcode_for_alias($barcode3);
   }
@@ -2576,12 +2610,10 @@ sub add_barcode {
   # I'm going to disable this as there's no real case for
   # letting people do this.
 
-  unless ("$barcode5$barcode3" =~ /^[GATC]+$/ | $session->param("is_admin")) { # Admins can use non-GATC barcodes
+  unless ("$barcode5$barcode3" =~ /^[GATC\:]+$/ | $session->param("is_admin")) { # Admins can use non-GATC barcodes
     print_error("Barcode sequences must only contain GATC");
     return;
   }
-
-  $description = 'No description' unless ($description);
 
   # If there are existing barcodes we need to check that the new barcodes
   # match the length and structure (5', 3' or both) of the existing ones
@@ -2636,6 +2668,42 @@ sub add_barcode {
     return;
   }
 
+  # We should check that this barcode name doesn't exist for
+  # this sample already
+
+  # If there isn't a name then we just go with barcode-x and
+  # keep increasing x until we find a name which hasn't been
+  # used.  If they specified the name then it's their job to
+  # make sure it's unique.
+
+  if ($description) {
+      my ($barcode_id) = $dbh->selectrow_array("SELECT id FROM barcode WHERE sample_id=? AND name=?",undef,($sample_id,$description));
+
+      if ($barcode_id) {
+	  print_error("This sample already has a barcode sample called \"$description\"");
+	  return;
+      }
+  }
+  else {
+      my $number = 0;
+
+      while (1) {
+	  ++$number;
+	  $description = "Barcode-$number";
+
+	  my ($barcode_id) = $dbh->selectrow_array("SELECT id FROM barcode WHERE sample_id=? AND name=?",undef,($sample_id,$description));
+
+	  last unless ($barcode_id);
+
+	  if ($number > 1000) {
+	      # Something's broken - we're never going to have more than 1000 barcodes
+	      # for a sample
+
+	      print_bug("Couldn't create a suitable barcode name for sample $sample_id");
+	      return;
+	  }
+      }
+  }
   # Make the new barcode
   $dbh->do("INSERT INTO barcode (sample_id,5_prime_barcode,3_prime_barcode,name) VALUES (?,?,?,?)",undef,($sample_id,$barcode5,$barcode3,$description)) or do {
     print_bug("Failed to insert new barcode: ".$dbh->errstr());
@@ -2644,6 +2712,78 @@ sub add_barcode {
 
   # Redirect them back to the edit sample page
   print $q->redirect("sierra.pl?action=edit_sample&sample_id=$sample_id");
+
+}
+
+sub show_note_file {
+
+  # Returns a file which was previously attached to a note
+
+  my $sample_id = $q -> param('sample_id');
+
+  unless ($sample_id =~ /^\d+$/) {
+      print_bug("Didn't look like a sample id");
+      return;
+  };
+
+
+  my $filename = $q -> param('filename');
+
+  unless ($filename =~ /^[\w\-._ ]+$/) {
+      print_error("Invalid file name");
+      return;
+  }
+
+
+  my $file_path = $Sierra::Constants::FILES_DIR . "/Sample${sample_id}/${filename}";
+
+
+  my $mime_type = 'text/plain';
+
+
+  my %overridden_types = (
+			  docx => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+			  pptx => 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+			  xlsx => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+			  pl => 'text/plain',
+                          sh => 'text/plain',
+			  pzfx => 'application/x-graphpad-prism-pzfx',
+			 );
+
+  if ($filename =~ /\.(\w+)$/) {
+    my $extension = lc($1);
+
+    if (exists $overridden_types{$extension}) {
+      $mime_type = $overridden_types{$extension};
+    }
+    else {
+
+      open (MIME,'/etc/mime.types') or do{print_bug("Can't open MIME type file: $!"); return;};
+
+      while (<MIME>) {
+	chomp;
+	my ($type,$ext) = split(/\s+/);
+	next unless ($ext);
+
+	if ($ext eq $extension) {
+	  $mime_type = $type;
+	  last;
+	}
+      }
+
+      close MIME;
+    }
+  }
+
+  open (FILE,$file_path) or do {print_bug("Can't read $file_path: $!");return;};
+
+  binmode FILE;
+
+  print "Content-type: $mime_type\n\n";
+
+  print while (<FILE>);
+
+  close FILE;
 
 }
 
@@ -3232,6 +3372,9 @@ sub finish_edit_sample {
     my $fh = $q->upload("barcode_file");
 
     my %seen_barcodes;
+    my %seen_names;
+
+    my $empty_barcode_number = 1;
 
     my $all_text;
     while (<$fh>) {
@@ -3251,6 +3394,11 @@ sub finish_edit_sample {
 
       my ($desc,$barcode5,$barcode3) = split(/\t/);
 
+      unless($desc) {
+	  $desc = "Barcode-$empty_barcode_number";
+	  ++$empty_barcode_number;
+      }
+
       $barcode3 = '' unless ($barcode3);
 
       $barcode5 = uc($barcode5);
@@ -3261,12 +3409,12 @@ sub finish_edit_sample {
 	return;
       }
 
-      if ($barcode5 and $barcode5 !~ /^[GATC]+$/) {
+      if ($barcode5 and $barcode5 !~ /^[GATC\:]+$/) {
 	# Try to look up the barcode as an alias
 	$barcode5 = get_barcode_for_alias($barcode5);
       }
 
-      if ($barcode3 and $barcode3 !~ /^[GATC]+$/) {
+      if ($barcode3 and $barcode3 !~ /^[GATC\:]+$/) {
 	# Try to look up the barcode as an alias
 	$barcode3 = get_barcode_for_alias($barcode3);
       }
@@ -3277,7 +3425,7 @@ sub finish_edit_sample {
 
       }
 
-      if ("$barcode5$barcode3" =~ /([^GATC]+)/) {
+      if ("$barcode5$barcode3" =~ /([^GATC\:]+)/) {
 	unless ($session->param("is_admin")) { # Admins can enter non GATC barcodes
 	  print_error("Non GATC sequences ('$1') in barcode for $desc");
 	  return;
@@ -3304,7 +3452,13 @@ sub finish_edit_sample {
 	return;
       }
 
+      if (exists $seen_names{$desc}) {
+	  print_error("Duplicate barcode name '$desc' supplied");
+	  return;
+      }
+
       $seen_barcodes{"$barcode5:$barcode3"} = 1;
+      $seen_names{$desc} = 1;
 
       push @barcodes,{description => $desc,
 		      '5prime' => $barcode5,
@@ -3453,12 +3607,61 @@ sub add_note {
     return;
   }
 
+  # See if they attached a file
+  my $filename = $q->param('attachment');
+
+  # If there is a filename then we'll retrieve the data and
+  # save it under the appropriate sample folder.
+  if ($filename) {
+      unless ($filename =~ /^[\w\-._ ]+$/) {
+	  print_error("Uploaded filenames can only contain numbers, letters dashes underscores spaces and dots");
+	  return;
+      }
+
+      # To make sure we have unique filenames we prepend the current
+      # timestamp to the name.
+
+      $filename = time()."_".$filename;
+
+      # Check to see if there's a folder for this sample already
+      my $folder_to_save_to = $Sierra::Constants::FILES_DIR . "/Sample$sample_id";
+
+      unless (-e $folder_to_save_to) {
+	  mkdir($folder_to_save_to) or do {
+	      print_bug("Couldn't create '$folder_to_save_to': $!");
+	      return();
+	  };
+      }
+
+      my $fh = $q -> upload('attachment');
+
+      binmode($fh);
+
+      open (ATT, ">","${folder_to_save_to}/${filename}") or do {
+	  print_bug("Couldn't save to '${folder_to_save_to}/${filename}': $!");
+	  return;
+      };
+
+      binmode(ATT);
+      
+      print ATT while (<$fh>);
+
+      close ATT or do {
+	  print_bug("Couldn't write to '${folder_to_save_to}/${filename}': $!");
+	  return;
+      };
+
+  }
+  else {
+      $filename = undef;
+  }
+
 
   my $note_text = $q->param("note");
   if ($note_text) {
 
     # We can now create a note
-    $dbh->do("INSERT INTO sample_note (sample_id,person_id,date,note) values (?,?,NOW(),?)",undef,($sample_id,$session->param("person_id"),$note_text)) or do {
+    $dbh->do("INSERT INTO sample_note (sample_id,person_id,date,note,filename) values (?,?,NOW(),?,?)",undef,($sample_id,$session->param("person_id"),$note_text,$filename)) or do {
       print_bug("Couldn't insert note into sample: ".$dbh->errstr());
       return;
     }
@@ -3836,13 +4039,225 @@ sub new_flowcell {
     }
   }
 
-
-
-
   print $session->header();
   print $template -> output();
 
 }
+
+
+sub edit_flowcell {
+
+    # This can only ever be called for flowcells which have
+    # been run already.  We don't let them change much about
+    # this.  Only the flowcell ID and the run folder name.
+
+    unless ($session -> param("is_admin")) {
+	print_bug("Only admins can view this page and you don't appear to be one");
+	return;
+    }
+
+    my $template = HTML::Template -> new (filename=>'edit_flowcell.html',associate => $session);
+
+    my $flowcell_id = $q->param("flowcell_id");
+
+    my ($id,$serial,$run_folder, $run_date) = $dbh->selectrow_array("SELECT flowcell.id, flowcell.serial_number, run.run_folder_name,run.date FROM flowcell,run WHERE flowcell.id=? AND run.flowcell_id=flowcell.id",undef,($flowcell_id));
+    unless ($id) {
+	print_bug("Couldn't find a run flowcell with id $flowcell_id: ".$dbh->errstr());
+	return;
+    }
+
+    $template -> param (
+	FLOWCELL_ID => $flowcell_id,
+	SERIAL_NUMBER => $serial,
+	RUN_FOLDER_NAME => $run_folder,
+	);
+
+    my ($run_year,$run_month, $run_day) = split(/-/,$run_date);
+
+
+    my @days;
+    for my $day (1..31) {
+	if ($day == $run_day) {
+	    push @days, {NAME => $day,SELECTED => 1};
+	}
+	else {
+	    push @days, {NAME => $day};
+	}
+    }
+    
+    $template->param(DAYS => \@days);
+
+    my @months = (
+	[1,'Jan'],
+	[2,'Feb'],
+	[3,'Mar'],
+	[4,'Apr'],
+	[5,'May'],
+	[6,'Jun'],
+	[7,'Jul'],
+	[8,'Aug'],
+	[9,'Sep'],
+	[10,'Oct'],
+	[11,'Nov'],
+	[12,'Dec'],
+	);
+    
+    my @template_months;
+    foreach my $month (@months) {
+	if ($month->[0] == $run_month) {
+	    push @template_months,{NUMBER=>$month->[0],NAME=>$month->[1],SELECTED=>1};
+	}
+	else {
+	    push @template_months,{NUMBER=>$month->[0],NAME=>$month->[1]};
+	}
+	
+    }
+    $template -> param(MONTHS => \@template_months);
+
+    my @years;
+
+    for my $year (2009..(localtime())[5]+1900) {
+
+	if ($year == $run_year) {
+	    push @years, {YEAR => $year,SELECTED => 1};
+	}
+	else {
+	    push @years, {YEAR => $year};
+	}
+
+    }
+
+    $template->param(YEARS=>\@years);
+
+  
+    print $session->header();
+    print $template -> output();
+
+}
+
+sub finish_edit_flowcell {
+
+    unless ($session -> param("is_admin")) {
+	print_bug("Only admins can view this page and you don't appear to be one");
+	return;
+    }
+
+    my $flowcell_id = $q->param("flowcell_id");
+
+    unless ($flowcell_id =~ /^\d+$/) {
+	print_bug("Flowcell id should be an integer, not '$flowcell_id'");
+	return;
+    }
+
+    # Get the run folder name
+    my $run_folder = $q->param("run_folder");
+    unless ($run_folder) {
+	print_error("No run folder name was supplied");
+	return;
+    }
+
+    # Get the flowcell serial number
+    my $serial_number = $q->param("serial_number");
+    unless ($serial_number) {
+	print_error("No serial number was supplied");
+	return;
+    }
+
+  # Get the date
+  my $day = $q -> param("day");
+  my $month = $q -> param("month");
+  my $year = $q -> param("year");
+
+  # Check if this is valid
+  if (!check_date($year,$month,$day)) {
+    print_error("Date $year-$month-$day doesn't appear to be a valid date");
+    return;
+  }
+
+  if (Delta_Days(Today(),$year,$month,$day) > 1) {
+    print_error("Your run date appears to be more than one day in the future");
+    return;
+  }
+
+  my $date = sprintf("%d-%02d-%02d",$year,$month,$day);
+
+
+    # We need to update the flowcell details
+    $dbh->do("UPDATE flowcell SET serial_number=? WHERE id=?",undef,($serial_number,$flowcell_id)) or do {
+	print_bug("Failed to update serial number for flowcell '$flowcell_id'".$dbh->errstr());
+	return;
+    };
+
+
+    # We need to update the run details
+    $dbh->do("UPDATE run SET run_folder_name=?, date=? WHERE flowcell_id=?",undef,($run_folder,$date,$flowcell_id)) or do {
+	print_bug("Failed to update run folder name for flowcell '$flowcell_id'".$dbh->errstr());
+	return;
+    };
+
+    print $q->redirect("sierra.pl?action=view_flowcell&flowcell_id=$flowcell_id");
+
+}
+
+sub delete_flowcell {
+
+    unless ($session -> param("is_admin")) {
+	print_bug("Only admins can view this page and you don't appear to be one");
+	return;
+    }
+
+    my $flowcell_id = $q->param("flowcell_id");
+
+    unless ($flowcell_id =~ /^\d+$/) {
+	print_bug("Flowcell id should be an integer, not '$flowcell_id'");
+	return;
+    }
+
+    # Check that this flowcell doesn't already have a run associated with
+    # it (since we can't change it if it has)
+
+    my ($run_id) = $dbh->selectrow_array("SELECT id FROM run WHERE flowcell_id=?",undef,($flowcell_id));
+
+    if ($run_id) {
+	print_bug("Can't delete this flowcell as it has has already been run (with run id $run_id)");
+	return;
+    }
+
+    # We need to remove any samples which have been added as lanes
+    # to this flowcell.
+
+    my $get_lanes_sth = $dbh->prepare("SELECT id, sample_id FROM lane where flowcell_id=?");
+
+    $get_lanes_sth -> execute($flowcell_id) or do {
+	print_bug("Couldn't list samples for flowcell $flowcell_id: ".$dbh->errstr());
+	return;
+    };
+
+    while (my ($lane_id,$sample_id) = $get_lanes_sth->fetchrow_array()) {
+	$dbh-> do ("DELETE FROM lane WHERE id=?",undef,($lane_id)) or do {
+	    print_bug("Failed to delete lane $lane_id:".$dbh->errstr());
+	    return;
+	};
+	
+	# Unset the complete flag on the sample it came from
+	$dbh -> do("UPDATE sample SET is_complete=0 WHERE id=?",undef,($sample_id)) or do {
+	    print_bug("Failed to reset complete flag on sample $sample_id:".$dbh->errstr());
+	    return;
+	};
+    }
+
+    # Now we can delete the flowcell itself
+    $dbh->do("DELETE from flowcell where id=?",undef,($flowcell_id)) or do {
+	print_bug("Failed to delete flowcell $flowcell_id: ".$dbh->errstr());
+	return;
+    };
+
+    # Return them to the front screen where they came from
+    print $q->redirect("sierra.pl#pending");
+
+}
+
+
 
 sub add_lane {
 
@@ -5385,7 +5800,7 @@ sub show_queue {
   # Admins get full details. Normal users see a reduced summary
 
   if ($session -> param("is_admin")) {
-    $active_samples_sth = $dbh->prepare("SELECT sample.id,sample.users_sample_name,sample.lanes_required,DATE_FORMAT(sample.received_date,'%e %b %Y'),DATE_FORMAT(sample.passed_qc_date,'%e %b %Y'),person.first_name,person.last_name,run_type.name FROM sample,person,run_type WHERE  sample.is_complete != 1 AND sample.person_id=person.id AND sample.run_type_id=run_type.id AND sample.is_suitable_control != 1 ORDER BY run_type.name,sample.submitted_date DESC");
+    $active_samples_sth = $dbh->prepare("SELECT sample.id,sample.users_sample_name,sample.lanes_required,DATE_FORMAT(sample.received_date,'%e %b %Y'),DATE_FORMAT(sample.passed_qc_date,'%e %b %Y'),person.first_name,person.last_name,run_type.name FROM sample,person,run_type WHERE  sample.is_complete != 1 AND sample.person_id=person.id AND sample.run_type_id=run_type.id AND sample.is_suitable_control != 1 ORDER BY sample.submitted_date");
 
     $active_samples_sth -> execute() or do {
       print_bug("Couldn't get list of active admin samples: ".$dbh->errstr());
@@ -5395,7 +5810,10 @@ sub show_queue {
 
     my $lane_count_sth = $dbh->prepare("SELECT count(*) FROM lane WHERE sample_id=?");
 
-    my @active_samples;
+    # We're splitting the active samples by the first word
+    # in the run type.
+    my %tables;
+    
     while (my ($id,$name,$requested,$received,$passed_qc,$first_name,$last_name,$run_type)= $active_samples_sth->fetchrow_array()) {
 
       $lane_count_sth ->execute($id) or do {
@@ -5405,8 +5823,24 @@ sub show_queue {
 
       my ($lane_count) = $lane_count_sth->fetchrow_array();
 
+      my $first_word = $run_type;
+      $first_word =~ s/\s.*$//;
 
-      push @active_samples, {
+      # We need to classify the samples.  The classification would be:
+
+      # Ready to sequence - has passed final QC
+      # Awaiting QC - received but no QC yet
+      # Not received
+
+      my $class = "";
+      if ($passed_qc) {
+	$class="ready";
+      }
+      elsif ($received) {
+	$class="received";
+      }
+
+      push @{$tables{$first_word}}, {
 			     SAMPLE_ID => $id,
 			     NAME => $name,
 			     RECEIVED => $received,
@@ -5416,10 +5850,25 @@ sub show_queue {
 			     LANES_RUN => $lane_count,
 			     IS_ADMIN => 1,
 			     OWNER => "$first_name $last_name",
+			     CLASS => $class,
 			    };
 
-      $template -> param(ACTIVE_SAMPLES => \@active_samples);
+      
+      
     }
+
+    # Now extract the tables into an array
+    my @tables;
+    foreach my $table (sort keys %tables) {
+      push @tables, {
+	TABLE_NAME => $table,
+	ACTIVE_SAMPLES => $tables{$table}
+      };
+    }
+    
+    $template -> param(TABLES => \@tables);
+
+    
   }
 
   else {

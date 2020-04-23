@@ -183,15 +183,17 @@ CREATE TABLE run (
 -- We should dynamically create these statements from the config file
 -- so we get the correct hostname.
 
+CREATE USER sierrauser@localhost IDENTIFIED BY "";
 GRANT INSERT,SELECT on sierra.* TO sierrauser@localhost;
 GRANT DELETE on sierra.password_reset TO sierrauser@localhost;
 GRANT DELETE on sierra.lane TO sierrauser@localhost;
 GRANT UPDATE on sierra.person TO sierrauser@localhost;
 GRANT UPDATE on sierra.sample TO sierrauser@localhost;
-GRANT UPDATE on sierra.flowcell TO sierrauser@localhost;
+GRANT UPDATE,DELETE on sierra.flowcell TO sierrauser@localhost;
 GRANT UPDATE on sierra.instrument TO sierrauser@localhost;
 GRANT DELETE on sierra.run_type_instrument TO sierrauser@localhost;
 GRANT UPDATE on sierra.run_type TO sierrauser@localhost;
+GRANT UPDATE on sierra.run TO sierrauser@localhost;
 GRANT UPDATE on sierra.sample_type TO sierrauser@localhost;
 GRANT UPDATE on sierra.search_database TO sierrauser@localhost;
 GRANT DELETE on sierra.person_permission TO sierrauser@localhost;
