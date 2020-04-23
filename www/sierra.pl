@@ -39,7 +39,7 @@ use Sierra::IlluminaRun;
 use Data::Dumper;
 
 # This is the script which controls the normal user interface
-# of the sierra system for managing next generation sequencing
+# of the sierra system for managing next genreation sequencing
 # data.
 
 
@@ -170,12 +170,6 @@ if ($session->param("person_id")) {
     }
     elsif ($action eq 'finish_edit_adapter_type') {
       finish_edit_adapter_type();
-    }
-    elsif ($action eq 'edit_library_prep_type') {
-      edit_library_prep_type();
-    }
-    elsif ($action eq 'finish_edit_library_prep_type') {
-      finish_edit_library_prep_type();
     }
     elsif ($action eq 'edit_sample_type') {
       edit_sample_type();
@@ -2371,7 +2365,7 @@ sub view_sample {
   }
 
   # We can now get the details for this sample
-  my ($person_id,$user_sample_name,$library_prep_id,$sample_type_id,$lanes_requested,$adapter_id,$submitted,$received,$passed_qc,$run_type,$search_id,$is_complete,$first_name,$last_name) = $dbh->selectrow_array("SELECT sample.person_id,sample.users_sample_name,sample.library_prep_id,sample.sample_type_id,sample.lanes_required,sample.adapter_id,DATE_FORMAT(sample.submitted_date,'%e %b %Y'),DATE_FORMAT(sample.received_date,'%e %b %Y'),DATE_FORMAT(sample.passed_qc_date,'%e %b %Y'),run_type.name,sample.search_database_id,sample.is_complete,person.first_name,person.last_name FROM sample,run_type,adapter,person WHERE sample.id=? AND sample.run_type_id=run_type.id AND sample.person_id=person.id",undef,($sample_id));
+  my ($person_id,$user_sample_name,$sample_type_id,$lanes_requested,$adapter_id,$submitted,$received,$passed_qc,$run_type,$search_id,$is_complete,$first_name,$last_name) = $dbh->selectrow_array("SELECT sample.person_id,sample.users_sample_name,sample.sample_type_id,sample.lanes_required,sample.adapter_id,DATE_FORMAT(sample.submitted_date,'%e %b %Y'),DATE_FORMAT(sample.received_date,'%e %b %Y'),DATE_FORMAT(sample.passed_qc_date,'%e %b %Y'),run_type.name,sample.search_database_id,sample.is_complete,person.first_name,person.last_name FROM sample,run_type,adapter,person WHERE sample.id=? AND sample.run_type_id=run_type.id AND sample.person_id=person.id",undef,($sample_id));
 
   unless ($person_id) {
     print_bug("Couldn't fetch details for sample '$sample_id':".$dbh->errstr());
@@ -2402,16 +2396,6 @@ sub view_sample {
     }
   }
 
-  # Translate the library prep type into a real name
-  my $library_type = 'Unknown';
-  if ($library_prep_id) {
-    ($library_type) = $dbh->selectrow_array("SELECT name FROM library_prep WHERE id=?",undef,($library_prep_id));
-    unless (defined $library_type) {
-      print_bug("Couldn't get library type from id $library_prep_id:".$dbh->errstr());
-      return;
-    }
-  }
-
   # Translate the adapter id into a real name
   my $adapter_name;
   if ($adapter_id) {
@@ -2421,7 +2405,6 @@ sub view_sample {
   $template -> param(SAMPLE_ID => $sample_id,
 		     USER_SAMPLE_ID => $user_sample_name,
 		     SAMPLE_TYPE => $sample_type,
-		     LIBRARY_PREP_TYPE => $library_type,
 		     LANES_REQUESTED => $lanes_requested,
 		     ADAPTER => $adapter_name,
 		     SUBMITTED_DATE => $submitted,
@@ -2905,11 +2888,11 @@ sub edit_sample {
   }
 
   # We can now get the details for this sample
-  my ($person_id,$user_sample_name,$sample_type_id,$library_prep_id,$lanes_requested,$adapter_id,$budget_code,$run_type,$search_id,$is_complete,$is_control);
+  my ($person_id,$user_sample_name,$sample_type_id,$lanes_requested,$adapter_id,$budget_code,$run_type,$search_id,$is_complete,$is_control);
   my $lanes_run;
   if ($sample_id) {
 
-    ($person_id,$user_sample_name,$sample_type_id,$library_prep_id,$lanes_requested,$adapter_id,$budget_code,$run_type,$search_id,$is_complete,$is_control) = $dbh->selectrow_array("SELECT sample.person_id,sample.users_sample_name,sample.sample_type_id,sample.library_prep_id,sample.lanes_required,sample.adapter_id,sample.budget_code,run_type.id,sample.search_database_id,sample.is_complete,sample.is_suitable_control FROM sample,run_type WHERE sample.id=? AND sample.run_type_id=run_type.id",undef,($sample_id));
+    ($person_id,$user_sample_name,$sample_type_id,$lanes_requested,$adapter_id,$budget_code,$run_type,$search_id,$is_complete,$is_control) = $dbh->selectrow_array("SELECT sample.person_id,sample.users_sample_name,sample.sample_type_id,sample.lanes_required,sample.adapter_id,sample.budget_code,run_type.id,sample.search_database_id,sample.is_complete,sample.is_suitable_control FROM sample,run_type WHERE sample.id=? AND sample.run_type_id=run_type.id",undef,($sample_id));
 
     unless ($person_id) {
       print_bug("Couldn't fetch details for sample '$sample_id':".$dbh->errstr());
@@ -3070,28 +3053,6 @@ sub edit_sample {
     }
   }
 
-  # We need a list of library prep types
-  my @library_prep_types;
-  my $library_prep_type_sth = $dbh->prepare("SELECT id,name,retired FROM library_prep ORDER BY retired, name");
-  $library_prep_type_sth->execute() or do {
-    print_bug("Couldn't get list of library prep types: ".$dbh->errstr());
-    return;
-  };
-
-  while (my ($id,$name,$retired) = $library_prep_type_sth->fetchrow_array()) {
-
-    if ($retired) {
-      $name = "[Retired] $name";
-    }
-
-    if ($library_prep_id and $id == $library_prep_id) {
-	push @library_prep_types, {ID=>$id,NAME=>$name, SELECTED=>1};
-    }
-    else {
-	push @library_prep_types, {ID=>$id,NAME=>$name};
-    }
-  }
-
   # We need a list of valid budget codes
 
   # If we're editing an existing sample then only admins get to
@@ -3191,7 +3152,6 @@ sub edit_sample {
 		     ADAPTERS => \@adapter_types,
 		     SAMPLE_TYPES => \@sample_types,
 		     DATABASES => \@databases,
-		     LIBRARY_PREP => \@library_prep_types,
 		    );
 
 
@@ -3227,7 +3187,7 @@ sub finish_edit_sample {
 
     # We need to check that this person can view this sample
     unless (check_sample_edit_permission($sample_id,$session->param("person_id"))) {
-      print_bug("You do not have permission to edit this sample. Sorry.");
+      print_bug("You do not have permission to edit this sample.  Sorry.");
       return;
     }
 
@@ -3247,7 +3207,7 @@ sub finish_edit_sample {
 
   # Now we can collect the new sample details
 
-   my $sample_name = $q->param("name");
+  my $sample_name = $q->param("name");
 
   unless ($sample_name) {
     print_error("No sample name was supplied");
@@ -3293,14 +3253,6 @@ sub finish_edit_sample {
   else {
     $sample_type_id = undef;
   }
-  
-  # Library Prep Type
-  my $library_type_id=$q->param("library_prep_type");
-  unless ($library_type_id) {
-      print_error("No Library Prep Type supplied");
-      return;
-  }
-
 
   # Run type
   my $run_type;
@@ -3499,7 +3451,7 @@ sub finish_edit_sample {
 
   if ($sample_id) {
 
-    $dbh->do("UPDATE sample set person_id=?,users_sample_name=?,sample_type_id=?,library_prep_id=?,lanes_required=?,adapter_id=?,budget_code=?,search_database_id=?,is_complete=?,is_suitable_control=? WHERE id=?",undef,($new_person_id,$sample_name,$sample_type_id,$library_type_id,$lanes_required,$adapter_id,$budget_code,$db_id,$original_is_complete,$is_control,$sample_id)) or do {
+    $dbh->do("UPDATE sample set person_id=?,users_sample_name=?,sample_type_id=?,lanes_required=?,adapter_id=?,budget_code=?,search_database_id=?,is_complete=?,is_suitable_control=? WHERE id=?",undef,($new_person_id,$sample_name,$sample_type_id,$lanes_required,$adapter_id,$budget_code,$db_id,$original_is_complete,$is_control,$sample_id)) or do {
       print_bug("Couldn't update sample details: ".$dbh->errstr());
       return;
     };
@@ -3508,7 +3460,7 @@ sub finish_edit_sample {
   else {
     $made_new_sample = 1;
 
-    $dbh->do("INSERT INTO sample (person_id,users_sample_name,sample_type_id,library_prep_id,lanes_required,adapter_id,budget_code,search_database_id,is_complete,is_suitable_control,submitted_date) VALUES (?,?,?,?,?,?,?,?,0,?,NOW())",undef,($new_person_id,$sample_name,$sample_type_id,$library_type_id,$lanes_required,$adapter_id,$budget_code,$db_id,$is_control)) or do {
+    $dbh->do("INSERT INTO sample (person_id,users_sample_name,sample_type_id,lanes_required,adapter_id,budget_code,search_database_id,is_complete,is_suitable_control,submitted_date) VALUES (?,?,?,?,?,?,?,0,?,NOW())",undef,($new_person_id,$sample_name,$sample_type_id,$lanes_required,$adapter_id,$budget_code,$db_id,$is_control)) or do {
       print_bug("Couldn't create sample: ".$dbh->errstr());
       return;
     };
@@ -4529,25 +4481,6 @@ sub configuration {
   $template->param(ADAPTER_TYPES => \@adapter_types);
 
 
-  # Now we list the library prep types
-  my $list_library_prep_types_sth = $dbh->prepare("SELECT id,name,retired,require_prep,allows_subsamples FROM library_prep ORDER BY name");
-  $list_library_prep_types_sth -> execute() or do {
-    print_bug("Couldn't get list of library prep types: ".$dbh->errstr());
-    return;
-  };
-
-  my @library_prep_types;
-  while (my ($id,$name,$retired,$requires_prep,$allows_subsamples) = $list_library_prep_types_sth -> fetchrow_array()) {
-    push @library_prep_types, {
-			LIBRARY_PREP_TYPE_ID => $id,
-			NAME => $name,
-			RETIRED => $retired,
-			REQUIRES_PREP => $requires_prep,
-		       };
-  }
-
-  $template->param(LIBRARY_PREP_TYPES => \@library_prep_types);
-
 
   # Now we list the sample types
   my $list_sample_types_sth = $dbh->prepare("SELECT id,name,description,retired FROM sample_type ORDER BY name");
@@ -5193,121 +5126,6 @@ sub finish_edit_run_type {
 
 }
 
-sub edit_library_prep_type {
-
-  unless ($session -> param("is_admin")) {
-    print_bug("Only admins can view this page and you don't appear to be one");
-    return;
-  }
-
-  my $template = HTML::Template -> new (filename=>'edit_library_prep_type.html',associate => $session);
-
-  my $library_prep_type_id = $q->param("library_prep_type_id");
-
-  if ($library_prep_type_id) {
-    my ($id,$name,$retired,$require_prep,$allows_subsamples) = $dbh->selectrow_array("SELECT id,name,retired,require_prep,allows_subsamples FROM library_prep WHERE id=?",undef,($library_prep_type_id));
-  
-    unless ($id) {
-	print_bug("Couldn't find a library prep type with id $library_prep_type_id".$dbh->errstr());
-	return;
-    }
-    
-    $template -> param (
-	LIBRARY_PREP_TYPE_ID => $library_prep_type_id,
-	NAME => $name,
-	RETIRED => $retired,
-	REQUIRE_PREP => $require_prep,
-	ALLOWS_SUBSAMPLES => $allows_subsamples,
-	);
-
-  }
-  print $session->header();
-  print $template -> output();
-
-}
-
-sub finish_edit_library_prep_type {
-    
-    unless ($session -> param("is_admin")) {
-	print_bug("Only admins can view this page and you don't appear to be one");
-	return;
-    }
-
-    my $library_prep_type_id = $q->param("library_prep_type_id");
-
-    if ($library_prep_type_id) {
-	unless ($library_prep_type_id =~ /^\d+$/) {
-	    print_bug("Library prep type id should be an integer, not '$library_prep_type_id'");
-	    return;
-	}
-    }
-    
-    # Get the name
-    my $name = $q->param("name");
-    unless ($name) {
-	print_error("No name was supplied");
-	return;
-    }
-
-    # Does it allow subsamples?
-    my $allows_subsamples = $q->param("allows_subsamples");
-    
-    if ($allows_subsamples) {
-	$allows_subsamples = 1;
-    }
-    else{
-	$allows_subsamples = 0;
-    }
-
-    # Does it require library prep?
-    my $require_prep = $q->param("require_prep");
-    
-    if ($require_prep){
-	$require_prep = 1;
-    }
-    else{
-	$require_prep = 0;
-    }
-    
-    # See if it's retired
-    my $retired = $q->param("retired");
-    if ($retired) {
-	$retired = 1;
-    }
-    else {
-	$retired = 0;
-    }
-    
-    
-    # If we have a library prep type id already we need to update its details
-    if ($library_prep_type_id) {
-	$dbh->do("UPDATE library_prep SET name=?,retired=?,require_prep=?,allows_subsamples=? WHERE id=?",undef,($name,$retired,$require_prep,$allows_subsamples,$library_prep_type_id)) or do {
-	    print_bug("Failed to update library prep type '$library_prep_type_id'".$dbh->errstr());
-	    return;
-	};
-    }
-    else {
-	# We're creating a new library prep type
-	$dbh->do("INSERT INTO library_prep (name,retired,require_prep,allows_subsamples) VALUES (?,?,?,?)",undef,($name,$retired,$require_prep,$allows_subsamples)) or do {
-	    print_bug("Failed to create new library prep type:".$dbh->errstr());
-	    return;
-	};
-	
-	($library_prep_type_id) = $dbh->selectrow_array("SELECT LAST_INSERT_ID()");
-	unless ($library_prep_type_id) {
-	    print_bug("Failed to get ID for newly created library prep ID: ".$dbh->errstr());
-	    return;
-	}
-	
-    }
-    
-    print $q->redirect("sierra.pl?action=configuration#library_prep_types");
-
-}
-
-
-
-
 
 sub edit_adapter_type {
 
@@ -5379,7 +5197,7 @@ sub finish_edit_adapter_type {
     };
   }
   else {
-    # We're creating a new adapter type
+    # We're creating a new run_type
     $dbh->do("INSERT INTO adapter (name,retired) VALUES (?,0)",undef,($name)) or do {
       print_bug("Failed to create new adapter type:".$dbh->errstr());
       return;

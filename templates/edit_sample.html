@@ -35,17 +35,6 @@
       </td>
     </tr>
     <tr>
-      <th>Library Prep Type</th>
-      <td>
-	<select name="library_prep_type">
-	  <!-- TMPL_LOOP NAME=LIBRARY_PREP -->    
-	  <option value="<!-- TMPL_VAR NAME=ID ESCAPE=HTML -->" <!-- TMPL_IF NAME=SELECTED -->selected<!-- /TMPL_IF -->><!-- TMPL_VAR NAME=NAME ESCAPE=HTML --></option>
-	  <!-- /TMPL_LOOP -->
-	</select>
-      </td>
-    </tr>
-
-    <tr>
 
       <!-- TMPL_IF NAME=IS_ADMIN -->
       <th>Lanes Required<!-- TMPL_IF NAME=LANES_RUN --><br>(Min <!-- TMPL_VAR NAME=LANES_RUN ESCAPE=HTML -->)<!-- /TMPL_IF --></th>
@@ -144,25 +133,13 @@
       <th>Force to be complete</th>
       <td><input type="checkbox" name="force_complete"></td>
     </tr>
-
     <tr>
-      <th>Upload sample description sheet<br>(Robot-preparation only, one description per line;<br>barcodes are added automatically!)</th>
-      <td><input type="file" name="robot_barcode_file"></td>
-    </tr>
-    
-    <tr>
-      <th>Upload barcode sheet<br>Format: description TAB barcode1 TAB barcode2<br>(Replaces existing barcodes)</th>
+      <th>Upload barcode sheet<br>(Replaces existing barcodes)</th>
       <td><input type="file" name="barcode_file"></td>
     </tr>
     <!-- TMPL_ELSE -->
     <tr>
-      <th>Upload sample description sheet<br>(Robot-preparation only, one desciption per line;<br>barcodes are added automatically!)</th>
-      <td><input type="file" name="robot_barcode_file"></td>
-    </tr>
-    
-
-    <tr>
-      <th>Upload barcode sheet<br>Format: description TAB barcode1 TAB barcode2</th>
+      <th>Upload barcode sheet</th>
       <td><input type="file" name="barcode_file"></td>
     </tr>
     <!-- /TMPL_IF -->
