@@ -188,6 +188,16 @@ td.received, tr.received td {
   text-align: center;
  }
 
+.right { 
+  margin-left: auto;
+  margin-right: 0;
+  text-align: right;
+ }
+
+.small {
+    font-size: 70%;
+}
+
 p.warning { 
 
   color: red;

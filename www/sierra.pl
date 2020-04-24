@@ -132,6 +132,9 @@ if ($session->param("person_id")) {
     elsif ($action eq 'add_note') {
       add_note();
     }
+    elsif ($action eq 'delete_note') {
+      delete_note();
+    }
     elsif ($action eq 'show_note_file') {
       show_note_file();
     }
@@ -2440,7 +2443,7 @@ sub view_sample {
 
 
   # Now add any notes
-  my $notes_sth = $dbh->prepare("SELECT person.first_name,person.last_name,DATE_FORMAT(sample_note.date,'%e %b %Y'),sample_note.note, sample_note.filename FROM sample_note,person WHERE sample_note.sample_id=? AND sample_note.person_id=person.id ORDER BY sample_note.date");
+  my $notes_sth = $dbh->prepare("SELECT sample_note.id,person.first_name,person.last_name,DATE_FORMAT(sample_note.date,'%e %b %Y'),sample_note.note, sample_note.filename FROM sample_note,person WHERE sample_note.sample_id=? AND sample_note.person_id=person.id ORDER BY sample_note.date");
 
   $notes_sth -> execute($sample_id) or do {
     print_bug("Can't get notes for sample '$sample_id': ".$dbh->errstr());
@@ -2448,13 +2451,20 @@ sub view_sample {
   };
 
   my @notes;
-  while (my ($first,$last,$date,$text,$filename) = $notes_sth->fetchrow_array()) {
+  while (my ($note_id,$first,$last,$date,$text,$filename) = $notes_sth->fetchrow_array()) {
     my @paragraphs;
 
     # The filename has a timestamp on the front.  We'll hide this
     # when we show it to use the user.
     my $viewname = $filename;
     $viewname =~ s/^\d+_//;
+
+    # Admins are allowed to delete notes
+    my $is_admin = 0;
+
+    if ($session -> param("is_admin")) {
+	$is_admin = 1;
+    }
 
     push @paragraphs, {TEXT => $_} foreach (split(/[\r\n]+/,$text));
     push @notes, {
@@ -2465,6 +2475,8 @@ sub view_sample {
 		  FILENAME => $filename,
 		  VIEWNAME => $viewname,
 		  SAMPLE_ID => $sample_id,
+		  NOTE_ID => $note_id,
+		  IS_ADMIN => $is_admin
 		 };
   }
 
@@ -3621,6 +3633,50 @@ sub add_note {
       return;
     }
   }
+
+  # Now we can redirect them to the newly created note
+  print $q->redirect("sierra.pl?action=view_sample&sample_id=$sample_id#notes");
+}
+
+
+sub delete_note {
+
+  my $note_id = $q -> param("note_id");
+  unless ($note_id and $note_id =~ /^\d+$/) {
+    print_bug ("'$note_id' didn't look like a real note ID when deleting a note");
+    return;
+  }
+
+
+  # Only admins can delete notes
+  unless ($session -> param("is_admin")) {
+      print_bug("Only admins are allowed to delete notes");
+      return;
+  }
+
+  # If there is a file with the note then delete that first
+  my ($sample_id,$filename) = $dbh->selectrow_array("SELECT sample_id, filename FROM sample_note WHERE id=?",undef,($note_id));
+
+  unless ($sample_id) {
+      print_bug("Failed to get details for note $note_id:" .$dbh->errstr());
+      return;
+  }
+
+  if ($filename) {
+      my $file_path = $Sierra::Constants::FILES_DIR . "/Sample$sample_id/".$filename;
+
+      unlink($file_path) or do {
+	  print_bug("Failed to delete $file_path: $!");
+	  return;
+      };
+
+  }
+
+  # Finally delete the note
+  $dbh->do("DELETE FROM sample_note WHERE id=?",undef,($note_id)) or do {
+      print_bug("Couldn't delete note $note_id: ".$dbh->errstr());
+      return;
+  };
 
   # Now we can redirect them to the newly created note
   print $q->redirect("sierra.pl?action=view_sample&sample_id=$sample_id#notes");
