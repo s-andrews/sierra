@@ -132,6 +132,9 @@ if ($session->param("person_id")) {
     elsif ($action eq 'add_note') {
       add_note();
     }
+    elsif ($action eq 'delete_note') {
+      delete_note();
+    }
     elsif ($action eq 'show_note_file') {
       show_note_file();
     }
@@ -203,6 +206,9 @@ if ($session->param("person_id")) {
     }
     elsif ($action eq 'receive_sample') {
       receive_sample();
+    }
+    elsif ($action eq 'pass_individual_qc_sample') {
+      pass_individual_qc_sample();
     }
     elsif ($action eq 'pass_qc_sample') {
       pass_qc_sample();
@@ -2437,7 +2443,7 @@ sub view_sample {
 
 
   # Now add any notes
-  my $notes_sth = $dbh->prepare("SELECT person.first_name,person.last_name,DATE_FORMAT(sample_note.date,'%e %b %Y'),sample_note.note, sample_note.filename FROM sample_note,person WHERE sample_note.sample_id=? AND sample_note.person_id=person.id ORDER BY sample_note.date");
+  my $notes_sth = $dbh->prepare("SELECT sample_note.id,person.first_name,person.last_name,DATE_FORMAT(sample_note.date,'%e %b %Y'),sample_note.note, sample_note.filename FROM sample_note,person WHERE sample_note.sample_id=? AND sample_note.person_id=person.id ORDER BY sample_note.date");
 
   $notes_sth -> execute($sample_id) or do {
     print_bug("Can't get notes for sample '$sample_id': ".$dbh->errstr());
@@ -2445,13 +2451,20 @@ sub view_sample {
   };
 
   my @notes;
-  while (my ($first,$last,$date,$text,$filename) = $notes_sth->fetchrow_array()) {
+  while (my ($note_id,$first,$last,$date,$text,$filename) = $notes_sth->fetchrow_array()) {
     my @paragraphs;
 
     # The filename has a timestamp on the front.  We'll hide this
     # when we show it to use the user.
     my $viewname = $filename;
     $viewname =~ s/^\d+_//;
+
+    # Admins are allowed to delete notes
+    my $is_admin = 0;
+
+    if ($session -> param("is_admin")) {
+	$is_admin = 1;
+    }
 
     push @paragraphs, {TEXT => $_} foreach (split(/[\r\n]+/,$text));
     push @notes, {
@@ -2462,6 +2475,8 @@ sub view_sample {
 		  FILENAME => $filename,
 		  VIEWNAME => $viewname,
 		  SAMPLE_ID => $sample_id,
+		  NOTE_ID => $note_id,
+		  IS_ADMIN => $is_admin
 		 };
   }
 
@@ -3623,6 +3638,50 @@ sub add_note {
   print $q->redirect("sierra.pl?action=view_sample&sample_id=$sample_id#notes");
 }
 
+
+sub delete_note {
+
+  my $note_id = $q -> param("note_id");
+  unless ($note_id and $note_id =~ /^\d+$/) {
+    print_bug ("'$note_id' didn't look like a real note ID when deleting a note");
+    return;
+  }
+
+
+  # Only admins can delete notes
+  unless ($session -> param("is_admin")) {
+      print_bug("Only admins are allowed to delete notes");
+      return;
+  }
+
+  # If there is a file with the note then delete that first
+  my ($sample_id,$filename) = $dbh->selectrow_array("SELECT sample_id, filename FROM sample_note WHERE id=?",undef,($note_id));
+
+  unless ($sample_id) {
+      print_bug("Failed to get details for note $note_id:" .$dbh->errstr());
+      return;
+  }
+
+  if ($filename) {
+      my $file_path = $Sierra::Constants::FILES_DIR . "/Sample$sample_id/".$filename;
+
+      unlink($file_path) or do {
+	  print_bug("Failed to delete $file_path: $!");
+	  return;
+      };
+
+  }
+
+  # Finally delete the note
+  $dbh->do("DELETE FROM sample_note WHERE id=?",undef,($note_id)) or do {
+      print_bug("Couldn't delete note $note_id: ".$dbh->errstr());
+      return;
+  };
+
+  # Now we can redirect them to the newly created note
+  print $q->redirect("sierra.pl?action=view_sample&sample_id=$sample_id#notes");
+}
+
 sub receive_sample {
 
   my $sample_id = $q -> param("sample_id");
@@ -3684,9 +3743,55 @@ sub pass_qc_sample {
     return;
   }
 
+  # Check that the sample has passed individual QC
+  my ($individual_date) = $dbh->selectrow_array("SELECT passed_individual_qc_date FROM sample WHERE id=?",undef,($sample_id));
+  unless ($individual_date) {
+    print_bug("Tried to pass QC on a sample ('$sample_id') which hasn't passed individual QC");
+    return;
+  }
+
   # Mark the sample as passing QC
   $dbh->do("UPDATE sample SET passed_qc_date=NOW() WHERE id=?",undef,($sample_id)) or do {
     print_bug("Can't flag sample '$sample_id' as passing qc: ".$dbh->errstr());
+    return;
+  };
+
+
+  # Now we can redraw the home screen
+  print $q->redirect("sierra.pl?action=show_queue");
+}
+
+sub pass_individual_qc_sample {
+
+  my $sample_id = $q -> param("sample_id");
+  unless ($sample_id and $sample_id =~ /^\d+$/) {
+    print_bug ("'$sample_id' didn't look like a real sample ID when adding a note");
+    return;
+  }
+
+  # Check that this is a real sample
+  my ($returned_id) = $dbh->selectrow_array("SELECT id FROM sample WHERE id=?",undef,($sample_id));
+  unless($returned_id) {
+    print_bug("Couldn't find a sample with id '$sample_id'");
+    return;
+  }
+
+  # Check the user is an admin (they need to be to do this)
+  unless ($session->param("is_admin")) {
+    print_bug("Only admins can receive samples,  Sorry.");
+    return;
+  }
+
+  # Check that the sample has been received
+  my ($received_date) = $dbh->selectrow_array("SELECT received_date FROM sample WHERE id=?",undef,($sample_id));
+  unless ($received_date) {
+    print_bug("Tried to pass individual QC on a sample ('$sample_id') which hasn't been received");
+    return;
+  }
+
+  # Mark the sample as passing QC
+  $dbh->do("UPDATE sample SET passed_individual_qc_date=NOW() WHERE id=?",undef,($sample_id)) or do {
+    print_bug("Can't flag sample '$sample_id' as passing individual qc: ".$dbh->errstr());
     return;
   };
 
@@ -4691,9 +4796,14 @@ sub reports {
 
      @headers = (
 		 {NAME=>'Sample'},
+		 {NAME=>'Sample type'},
 		 {NAME =>'Run Type'},
 		 {NAME => 'Lanes'},
-		 {NAME => 'Date'},
+		 {NAME => 'Submitted'},
+		 {NAME => 'Received'},
+		 {NAME => 'QC1'},
+		 {NAME => 'QC2'},
+		 {NAME => 'Run'},
 		 {NAME => 'Name'},
 		 {NAME => 'Email'},
 		 {NAME => 'Budget'},
@@ -4701,7 +4811,7 @@ sub reports {
 
 
      # First get a list of all of the lanes run in this period.
-     my $report_sth = $dbh->prepare("SELECT sample.id,sample.users_sample_name,run_type.name,DATE_FORMAT(run.date,'%e %b %Y'),person.first_name,person.last_name, person.email,sample.budget_code FROM run,flowcell,lane,sample,run_type,person WHERE run.date>= ? AND run.date < ? AND run.flowcell_id=flowcell.id AND flowcell.run_type_id=run_type.id AND flowcell.id=lane.flowcell_id AND lane.sample_id=sample.id AND sample.person_id=person.id ORDER BY sample.id,run.date");
+     my $report_sth = $dbh->prepare("SELECT sample.id,sample.users_sample_name,sample_type.name,run_type.name,DATE_FORMAT(sample.submitted_date,'%e %b %Y'),DATE_FORMAT(sample.received_date,'%e %b %Y'),DATE_FORMAT(sample.passed_individual_qc_date,'%e %b %Y'),DATE_FORMAT(sample.passed_qc_date,'%e %b %Y'),DATE_FORMAT(run.date,'%e %b %Y'),person.first_name,person.last_name, person.email,sample.budget_code FROM run,flowcell,lane,sample,sample_type,run_type,person WHERE run.date>= ? AND run.date < ? AND run.flowcell_id=flowcell.id AND flowcell.run_type_id=run_type.id AND flowcell.id=lane.flowcell_id AND lane.sample_id=sample.id AND sample.sample_type_id=sample_type.id AND sample.person_id=person.id ORDER BY sample.id,run.date");
 
      $report_sth -> execute("${from_year}-${from_month}-01","${to_year}-${to_month}-31") or do {
        print_bug("Failed to run usage search: ".$dbh->errstr());
@@ -4711,15 +4821,15 @@ sub reports {
 
      my $last_entry;
 
-     while (my ($sample_id,$sample_name,$run_type,$date,$first_name,$last_name,$email,$budget) = $report_sth->fetchrow_array) {
+     while (my ($sample_id,$sample_name,$sample_type,$run_type,$date_submitted, $date_recevied, $date_qc1, $date_qc2, $date_run,$first_name,$last_name,$email,$budget) = $report_sth->fetchrow_array) {
 
        next if ($sample_id == 1);
        next if ($sample_name =~ /phix/i);
        next if ($sample_name =~ /empty lane/i);
 
        if ($last_entry and $last_entry ->{SAMPLE_ID} == $sample_id) {
-	 ++$last_entry->{ROW}->[2]->{VALUE}; # Increment the number of lanes
-	 $last_entry ->{ROW}->[3]->{VALUE} = $date; # Set the date to the more recent date
+	 ++$last_entry->{ROW}->[3]->{VALUE}; # Increment the number of lanes
+	 $last_entry ->{ROW}->[8]->{VALUE} = $date_run; # Set the date to the more recent date
 	 next;
        }
        else {
@@ -4731,7 +4841,7 @@ sub reports {
 		      ROW => [],
 		     };
 
-       foreach ("Sample $sample_id ($sample_name)",$run_type,1,$date,"$first_name $last_name",$email,$budget) {
+       foreach ("Sample $sample_id ($sample_name)",$sample_type,$run_type,1,$date_submitted, $date_recevied,$date_qc1, $date_qc2, $date_run,"$first_name $last_name",$email,$budget) {
 	 push @{$last_entry->{ROW}},{VALUE => $_};
        }
 
@@ -5618,7 +5728,7 @@ sub show_queue {
   # Admins get full details. Normal users see a reduced summary
 
   if ($session -> param("is_admin")) {
-    $active_samples_sth = $dbh->prepare("SELECT sample.id,sample.users_sample_name,sample.lanes_required,DATE_FORMAT(sample.received_date,'%e %b %Y'),DATE_FORMAT(sample.passed_qc_date,'%e %b %Y'),person.first_name,person.last_name,run_type.name FROM sample,person,run_type WHERE  sample.is_complete != 1 AND sample.person_id=person.id AND sample.run_type_id=run_type.id AND sample.is_suitable_control != 1 ORDER BY sample.submitted_date");
+    $active_samples_sth = $dbh->prepare("SELECT sample.id,sample.users_sample_name,sample.lanes_required,DATE_FORMAT(sample.received_date,'%e %b %Y'),DATE_FORMAT(sample.passed_individual_qc_date,'%e %b %Y'),DATE_FORMAT(sample.passed_qc_date,'%e %b %Y'),person.first_name,person.last_name,run_type.name FROM sample,person,run_type WHERE  sample.is_complete != 1 AND sample.person_id=person.id AND sample.run_type_id=run_type.id AND sample.is_suitable_control != 1 ORDER BY sample.submitted_date");
 
     $active_samples_sth -> execute() or do {
       print_bug("Couldn't get list of active admin samples: ".$dbh->errstr());
@@ -5632,7 +5742,7 @@ sub show_queue {
     # in the run type.
     my %tables;
     
-    while (my ($id,$name,$requested,$received,$passed_qc,$first_name,$last_name,$run_type)= $active_samples_sth->fetchrow_array()) {
+    while (my ($id,$name,$requested,$received,$passed_individual_qc,$passed_qc,$first_name,$last_name,$run_type)= $active_samples_sth->fetchrow_array()) {
 
       $lane_count_sth ->execute($id) or do {
 	print_bug("Couldn't count lanes run for sample '$id': ".$dbh->errstr());
@@ -5654,14 +5764,21 @@ sub show_queue {
       if ($passed_qc) {
 	$class="ready";
       }
+      elsif ($passed_individual_qc) {
+	$class="partqc";
+      }
       elsif ($received) {
 	$class="received";
+      }
+      else {
+	  $class="notreceived";
       }
 
       push @{$tables{$first_word}}, {
 			     SAMPLE_ID => $id,
 			     NAME => $name,
 			     RECEIVED => $received,
+			     PASSED_INDIVIDUAL_QC => $passed_individual_qc,
 			     PASSED_QC => $passed_qc,
 			     LANES_REQUESTED => $requested,
 			     RUN_TYPE => $run_type,

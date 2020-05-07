@@ -43,6 +43,7 @@ CREATE TABLE sample (
 	submitted_date DATETIME,
 	received_by_person_id INT,
 	received_date DATETIME,
+	passed_individual_qc_date DATETIME,
 	passed_qc_date DATETIME,
 	run_type_id INT,
 	adapter_id INT,
@@ -59,6 +60,7 @@ CREATE TABLE sample (
 	KEY (adapter_id),
 	KEY (received_date),
 	KEY (passed_qc_date),
+	KEY (passed_individual_qc_date),
 	KEY (budget_code),
 	KEY (search_database_id),
 	KEY (is_suitable_control),
@@ -90,6 +92,7 @@ CREATE TABLE sample_note (
 	person_id INT,
 	date DATETIME,
 	note TEXT,
+	filename VARCHAR(200),
 	KEY (sample_id),
 	KEY (date)
 );
@@ -199,6 +202,7 @@ GRANT UPDATE on sierra.search_database TO sierrauser@localhost;
 GRANT DELETE on sierra.person_permission TO sierrauser@localhost;
 GRANT DELETE on sierra.sample_auth_key TO sierrauser@localhost;
 GRANT DELETE on sierra.barcode TO sierrauser@localhost;
+GRANT DELETE on sierra.sample_note TO sierrauser@localhost;
 
 FLUSH PRIVILEGES;
 

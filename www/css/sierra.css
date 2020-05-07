@@ -67,11 +67,15 @@ td input[type="text"]  {
   width: 95%;
 }
 
-tr.ready td {
+td.ready, tr.ready td {
     background-color: #ccebe5;
 }
 
-tr.received td {
+td.partqc, tr.partqc td {
+    background-color: #ebcce5;
+}
+
+td.received, tr.received td {
     background-color: #fed9a6;
 }
 
@@ -183,6 +187,16 @@ tr.received td {
   margin-right: auto;
   text-align: center;
  }
+
+.right { 
+  margin-left: auto;
+  margin-right: 0;
+  text-align: right;
+ }
+
+.small {
+    font-size: 70%;
+}
 
 p.warning { 
 

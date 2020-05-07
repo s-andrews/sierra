@@ -148,10 +148,12 @@
 
     <!-- TMPL_IF NAME=FILENAME -->
     <p><strong>Attached file: </strong><a href="sierra.pl/<!-- TMPL_VAR NAME=VIEWNAME ESCAPE=URL -->?action=show_note_file&amp;sample_id=<!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML -->&amp;filename=<!-- TMPL_VAR NAME=FILENAME ESCAPE=URL -->"><!-- TMPL_VAR NAME=VIEWNAME ESCAPE=HTML --></a></p>
-
-
     <!-- /TMPL_IF -->
 
+
+    <!-- TMPL_IF NAME=IS_ADMIN -->
+    <p class="right small"><a href="sierra.pl?action=delete_note&amp;note_id=<!-- TMPL_VAR NAME=NOTE_ID -->">Delete Note</a></p>
+    <!-- /TMPL_IF -->
 
   </div>
   <!-- /TMPL_LOOP -->

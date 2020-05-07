@@ -38,6 +38,7 @@ The list of non-core modules required by Sierra is:
 
 HTML::Template
 CGI::Session
+Digest::Bcrypt
 DBI
 DBD::mysql
 Net::SMTP
