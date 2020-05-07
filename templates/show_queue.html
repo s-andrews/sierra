@@ -14,8 +14,8 @@
     <tr>
       <td class="notreceived">Not Received <input type="checkbox" id="filter_notreceived" checked></td>
       <td class="received">Received <input type="checkbox" id="filter_received" checked></td>
-      <td class="partqc">Passed Separate QC <input type="checkbox" id="filter_separateqc" checked></td>
-      <td class="ready">Passed Combined QC <input type="checkbox" id="filter_combinedqc" checked></td>
+      <td class="partqc">Passed Individual QC <input type="checkbox" id="filter_individualqc" checked></td>
+      <td class="ready">Passed Final QC <input type="checkbox" id="filter_finalqc" checked></td>
     </tr>
   </table>
 
@@ -36,10 +36,10 @@
       $("#filter_received").click(function(){
         $("tr.received").toggle();
       });
-      $("#filter_separateqc").click(function(){
+      $("#filter_individualqc").click(function(){
         $("tr.partqc").toggle();
       });
-      $("#filter_combinedqc").click(function(){
+      $("#filter_finalqc").click(function(){
         $("tr.ready").toggle();
       });
 
@@ -69,7 +69,7 @@
       <th>Run type</th>
       <th>Received</th>
       <th>Passed Individual QC</th>
-      <th>Passed Group QC</th>
+      <th>Passed Final QC</th>
       <th>Lanes Requested</th>
       <th>Lanes Run</th>
     </tr>
@@ -91,7 +91,7 @@
           <!-- TMPL_ELSE -->
             <!-- TMPL_IF NAME=PASSED_INDIVIDUAL_QC -->
               <!-- TMPL_IF NAME=IS_ADMIN -->
-                <a href="sierra.pl?action=pass_qc_sample&amp;sample_id=<!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML -->">Pass Group QC</a>
+                <a href="sierra.pl?action=pass_qc_sample&amp;sample_id=<!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML -->">Pass Final QC</a>
               <!-- TMPL_ELSE -->
                 Not Passed QC
               <!-- /TMPL_IF-->
