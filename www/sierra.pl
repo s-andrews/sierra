@@ -4656,7 +4656,7 @@ sub reports {
   my @report_types;
 
   foreach my $type (qw(Usage Runs Instruments)) {
-    if ($type eq $report_type) {
+    if ($type and $type eq $report_type) {
       push @report_types, {TYPE=>$type, SELECTED=>1};
     }
     else {
@@ -4810,22 +4810,34 @@ sub reports {
 		);
 
 
-     # First get a list of all of the lanes run in this period.
-     my $report_sth = $dbh->prepare("SELECT sample.id,sample.users_sample_name,sample_type.name,run_type.name,DATE_FORMAT(sample.submitted_date,'%e %b %Y'),DATE_FORMAT(sample.received_date,'%e %b %Y'),DATE_FORMAT(sample.passed_individual_qc_date,'%e %b %Y'),DATE_FORMAT(sample.passed_qc_date,'%e %b %Y'),DATE_FORMAT(run.date,'%e %b %Y'),person.first_name,person.last_name, person.email,sample.budget_code FROM run,flowcell,lane,sample,sample_type,run_type,person WHERE run.date>= ? AND run.date < ? AND run.flowcell_id=flowcell.id AND flowcell.run_type_id=run_type.id AND flowcell.id=lane.flowcell_id AND lane.sample_id=sample.id AND sample.sample_type_id=sample_type.id AND sample.person_id=person.id ORDER BY sample.id,run.date");
+     # First get a list of all of the lanes run in this period. Don't select the sample
+     # type as this might be null if they've not declared one.
+     my $report_sth = $dbh->prepare("SELECT sample.id,sample.users_sample_name,sample.sample_type_id,run_type.name,DATE_FORMAT(sample.submitted_date,'%e %b %Y'),DATE_FORMAT(sample.received_date,'%e %b %Y'),DATE_FORMAT(sample.passed_individual_qc_date,'%e %b %Y'),DATE_FORMAT(sample.passed_qc_date,'%e %b %Y'),DATE_FORMAT(run.date,'%e %b %Y'),person.first_name,person.last_name, person.email,sample.budget_code FROM run,flowcell,lane,sample,run_type,person WHERE run.date>= ? AND run.date < ? AND run.flowcell_id=flowcell.id AND flowcell.run_type_id=run_type.id AND flowcell.id=lane.flowcell_id AND lane.sample_id=sample.id AND sample.person_id=person.id ORDER BY sample.id,run.date");
 
      $report_sth -> execute("${from_year}-${from_month}-01","${to_year}-${to_month}-31") or do {
        print_bug("Failed to run usage search: ".$dbh->errstr());
        return;
      };
 
+     # Prepare a query to get the sample type name where there is one
+     my $sample_type_sth = $dbh->prepare("SELECT name FROM sample_type WHERE id=?");
 
      my $last_entry;
 
-     while (my ($sample_id,$sample_name,$sample_type,$run_type,$date_submitted, $date_recevied, $date_qc1, $date_qc2, $date_run,$first_name,$last_name,$email,$budget) = $report_sth->fetchrow_array) {
+     while (my ($sample_id,$sample_name,$sample_type_id,$run_type,$date_submitted, $date_recevied, $date_qc1, $date_qc2, $date_run,$first_name,$last_name,$email,$budget) = $report_sth->fetchrow_array) {
 
        next if ($sample_id == 1);
        next if ($sample_name =~ /phix/i);
        next if ($sample_name =~ /empty lane/i);
+
+       my $sample_type = "Unknown";
+
+       if ($sample_type_id) {
+	   $sample_type_sth -> execute($sample_type_id) or do {
+	       print_bug("Failed to get sample type name for id $sample_type_id ".$dbh->errstr());
+	   };
+	   ($sample_type) = $sample_type_sth -> fetchrow_array();
+       }
 
        if ($last_entry and $last_entry ->{SAMPLE_ID} == $sample_id) {
 	 ++$last_entry->{ROW}->[3]->{VALUE}; # Increment the number of lanes
