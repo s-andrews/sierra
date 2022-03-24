@@ -2981,6 +2981,7 @@ sub edit_sample {
     # previously entered sample
 
     $sample_type_id = $q->param("sample_type");
+    $sample_hidden = $q->param("sample_hidden");
     $lanes_requested = $q->param("lanes_required");
     $adapter_id = $q->param("adapter_id");
     $run_type = $q->param("run_type_id");
@@ -3491,7 +3492,7 @@ sub finish_edit_sample {
   else {
     $made_new_sample = 1;
 
-    $dbh->do("INSERT INTO sample (person_id,users_sample_name,sample_type_id,lanes_required,adapter_id,budget_code,search_database_id,is_complete,is_suitable_control,submitted_date) VALUES (?,?,?,?,?,?,?,0,?,NOW())",undef,($new_person_id,$sample_name,$sample_type_id,$lanes_required,$adapter_id,$budget_code,$db_id,$is_control)) or do {
+    $dbh->do("INSERT INTO sample (person_id,users_sample_name,is_hidden,sample_type_id,lanes_required,adapter_id,budget_code,search_database_id,is_complete,is_suitable_control,submitted_date) VALUES (?,?,?,?,?,?,?,?,0,?,NOW())",undef,($new_person_id,$sample_name,$sample_hidden,$sample_type_id,$lanes_required,$adapter_id,$budget_code,$db_id,$is_control)) or do {
       print_bug("Couldn't create sample: ".$dbh->errstr());
       return;
     };
@@ -3558,7 +3559,7 @@ sub finish_edit_sample {
   # If they've created a new sample then we send them to make another
   # one with the same settings
   if ($made_new_sample) {
-    print $q->redirect("sierra.pl?action=edit_sample&last_sample_id=$sample_id&sample_type=$sample_type_id&lanes_required=$lanes_required&run_type_id=$run_type&database_id=$db_id&person_id=$new_person_id&adapter=$adapter_id&budget=$budget_code");
+    print $q->redirect("sierra.pl?action=edit_sample&last_sample_id=$sample_id&sample_hidden=$sample_hidden&sample_type=$sample_type_id&lanes_required=$lanes_required&run_type_id=$run_type&database_id=$db_id&person_id=$new_person_id&adapter=$adapter_id&budget=$budget_code");
   }
 
   # Otherwise we send them back to look at the details for the sample
