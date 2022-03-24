@@ -34,8 +34,14 @@
 	</select>
       </td>
     </tr>
-    <tr>
 
+    <!-- TMPL_IF NAME=IS_ADMIN -->
+    <tr>
+      <th>Sample Hidden</th>
+      <td><input type="checkbox" name="sample_hidden"<!-- TMPL_IF NAME=SAMPLE_HIDDEN -->checked<!-- /TMPL_IF -->></td>
+    </tr>
+    <!-- /TMPL_IF -->
+    <tr>
       <!-- TMPL_IF NAME=IS_ADMIN -->
       <th>Lanes Required<!-- TMPL_IF NAME=LANES_RUN --><br>(Min <!-- TMPL_VAR NAME=LANES_RUN ESCAPE=HTML -->)<!-- /TMPL_IF --></th>
       <td><input type="text" name="lanes_required" value="<!-- TMPL_VAR NAME=LANES_REQUESTED ESCAPE=HTML -->"></td>

@@ -16,6 +16,19 @@
     <tr>
       <th>Sample Status</th>
       <td><!-- TMPL_IF NAME=IS_ACTIVE -->Active<!-- TMPL_ELSE -->Completed<!-- /TMPL_IF --></td>
+    </tr>
+    <!-- TMPL_IF NAME=IS_ADMIN -->
+    <tr>
+      <th>Sample Hidden</th>
+      <td>
+	<!-- TMPL_IF NAME=SAMPLE_HIDDEN -->
+	Yes
+	<!-- TMPL_ELSE -->
+	No
+	<!-- /TMPL_IF -->
+      </td>
+    </tr>
+    <!-- /TMPL_IF -->
     <tr>
       <th>Sample Name</th>
       <td><!-- TMPL_VAR NAME=USER_SAMPLE_ID ESCAPE=HTML --></td>

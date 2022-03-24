@@ -38,6 +38,7 @@ CREATE TABLE sample (
 	id INT AUTO_INCREMENT PRIMARY KEY,
 	person_id INT,
 	sample_type_id INT,
+	is_hidden BOOLEAN NOT NULL DEFAULT 0,
 	users_sample_name VARCHAR(50),
 	lanes_required INT,
 	submitted_date DATETIME,

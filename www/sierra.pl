@@ -2153,7 +2153,7 @@ sub view_lane {
   }
 
   # We can now get the details for this lane
-  my ($run_folder,$lane_number,$sample_id,$sample_name,$run_type,$date_run,$search_database_id,$run_id,$flowcell_id) = $dbh->selectrow_array("SELECT run.run_folder_name,lane.lane_number,lane.sample_id,sample.users_sample_name,run_type.name,DATE_FORMAT(run.date,'%e %b %Y'),sample.search_database_id,run.id,run.flowcell_id FROM lane,flowcell,run,run_type,sample WHERE lane.id=? AND lane.flowcell_id=run.flowcell_id AND lane.flowcell_id=flowcell.id AND lane.sample_id=sample.id AND flowcell.run_type_id=run_type.id",undef,($lane_id));
+  my ($run_folder,$lane_number,$sample_id,$sample_name,$sample_hidden,$run_type,$date_run,$search_database_id,$run_id,$flowcell_id) = $dbh->selectrow_array("SELECT run.run_folder_name,lane.lane_number,lane.sample_id,sample.users_sample_name,sample.is_hidden,run_type.name,DATE_FORMAT(run.date,'%e %b %Y'),sample.search_database_id,run.id,run.flowcell_id FROM lane,flowcell,run,run_type,sample WHERE lane.id=? AND lane.flowcell_id=run.flowcell_id AND lane.flowcell_id=flowcell.id AND lane.sample_id=sample.id AND flowcell.run_type_id=run_type.id",undef,($lane_id));
 
   unless ($sample_id) {
     print_bug("Couldn't get details for lane $lane_id: ".$dbh->errstr());
@@ -2327,16 +2327,21 @@ sub view_lane {
   }
 
   # Now turn the %file_type_results hash into an array to include
-  # it in the template
+  # it in the template.  If the person looking at the page isn't an
+  # admin and if the sample is flagged as hidden then we won't do this
+
   my @results;
   foreach my $file_type (sort {$a cmp $b} keys %file_type_results) {
     push @results, $file_type_results{$file_type};
   }
 
-  $template->param(
-      FILE_TYPE_RESULTS => \@results,
-      LINKS => \@links,
-      );
+
+  if ($session->param("is_admin") or !$sample_hidden) {
+      $template->param(
+	  FILE_TYPE_RESULTS => \@results,
+	  LINKS => \@links,
+	  );
+  }
 
 #  print "Content-type:text/plain\n\n",(Dumper(\@results));
 #  return;
@@ -2371,7 +2376,7 @@ sub view_sample {
   }
 
   # We can now get the details for this sample
-  my ($person_id,$user_sample_name,$sample_type_id,$lanes_requested,$adapter_id,$submitted,$received,$passed_qc,$run_type,$search_id,$is_complete,$first_name,$last_name) = $dbh->selectrow_array("SELECT sample.person_id,sample.users_sample_name,sample.sample_type_id,sample.lanes_required,sample.adapter_id,DATE_FORMAT(sample.submitted_date,'%e %b %Y'),DATE_FORMAT(sample.received_date,'%e %b %Y'),DATE_FORMAT(sample.passed_qc_date,'%e %b %Y'),run_type.name,sample.search_database_id,sample.is_complete,person.first_name,person.last_name FROM sample,run_type,adapter,person WHERE sample.id=? AND sample.run_type_id=run_type.id AND sample.person_id=person.id",undef,($sample_id));
+  my ($person_id,$user_sample_name,$sample_hidden,$sample_type_id,$lanes_requested,$adapter_id,$submitted,$received,$passed_qc,$run_type,$search_id,$is_complete,$first_name,$last_name) = $dbh->selectrow_array("SELECT sample.person_id,sample.users_sample_name,sample.is_hidden,sample.sample_type_id,sample.lanes_required,sample.adapter_id,DATE_FORMAT(sample.submitted_date,'%e %b %Y'),DATE_FORMAT(sample.received_date,'%e %b %Y'),DATE_FORMAT(sample.passed_qc_date,'%e %b %Y'),run_type.name,sample.search_database_id,sample.is_complete,person.first_name,person.last_name FROM sample,run_type,adapter,person WHERE sample.id=? AND sample.run_type_id=run_type.id AND sample.person_id=person.id",undef,($sample_id));
 
   unless ($person_id) {
     print_bug("Couldn't fetch details for sample '$sample_id':".$dbh->errstr());
@@ -2411,6 +2416,7 @@ sub view_sample {
   $template -> param(SAMPLE_ID => $sample_id,
 		     USER_SAMPLE_ID => $user_sample_name,
 		     SAMPLE_TYPE => $sample_type,
+		     SAMPLE_HIDDEN => $sample_hidden,
 		     LANES_REQUESTED => $lanes_requested,
 		     ADAPTER => $adapter_name,
 		     SUBMITTED_DATE => $submitted,
@@ -2903,11 +2909,11 @@ sub edit_sample {
   }
 
   # We can now get the details for this sample
-  my ($person_id,$user_sample_name,$sample_type_id,$lanes_requested,$adapter_id,$budget_code,$run_type,$search_id,$is_complete,$is_control);
+  my ($person_id,$user_sample_name,$sample_hidden,$sample_type_id,$lanes_requested,$adapter_id,$budget_code,$run_type,$search_id,$is_complete,$is_control);
   my $lanes_run;
   if ($sample_id) {
 
-    ($person_id,$user_sample_name,$sample_type_id,$lanes_requested,$adapter_id,$budget_code,$run_type,$search_id,$is_complete,$is_control) = $dbh->selectrow_array("SELECT sample.person_id,sample.users_sample_name,sample.sample_type_id,sample.lanes_required,sample.adapter_id,sample.budget_code,run_type.id,sample.search_database_id,sample.is_complete,sample.is_suitable_control FROM sample,run_type WHERE sample.id=? AND sample.run_type_id=run_type.id",undef,($sample_id));
+    ($person_id,$user_sample_name,$sample_hidden,$sample_type_id,$lanes_requested,$adapter_id,$budget_code,$run_type,$search_id,$is_complete,$is_control) = $dbh->selectrow_array("SELECT sample.person_id,sample.users_sample_name,sample.is_hidden,sample.sample_type_id,sample.lanes_required,sample.adapter_id,sample.budget_code,run_type.id,sample.search_database_id,sample.is_complete,sample.is_suitable_control FROM sample,run_type WHERE sample.id=? AND sample.run_type_id=run_type.id",undef,($sample_id));
 
     unless ($person_id) {
       print_bug("Couldn't fetch details for sample '$sample_id':".$dbh->errstr());
@@ -3162,6 +3168,7 @@ sub edit_sample {
 
   $template -> param(SAMPLE_ID => $sample_id,
 		     USER_SAMPLE_ID => $user_sample_name,
+		     SAMPLE_HIDDEN => $sample_hidden,
 		     LANES_REQUESTED => $lanes_requested,
 		     RUNTYPES => \@runs,
 		     ADAPTERS => \@adapter_types,
@@ -3183,7 +3190,7 @@ sub finish_edit_sample {
 
   my $lanes_run = 0;
 
-  my ($person_id,$original_lanes_requested,$original_is_complete);
+  my ($person_id,$original_lanes_requested,$original_is_complete,$original_is_hidden);
 
   if ($sample_id) {
     unless ($sample_id =~ /^\d+$/) {
@@ -3192,7 +3199,7 @@ sub finish_edit_sample {
     }
 
     # We can now get some of the details for this sample
-    ($person_id,$original_lanes_requested,$original_is_complete) = $dbh->selectrow_array("SELECT sample.person_id,sample.lanes_required,sample.is_complete FROM sample WHERE sample.id=?",undef,($sample_id));
+    ($person_id,$original_lanes_requested,$original_is_complete,$original_is_hidden) = $dbh->selectrow_array("SELECT sample.person_id,sample.lanes_required,sample.is_complete,sample.is_hidden FROM sample WHERE sample.id=?",undef,($sample_id));
 
 
     unless ($person_id) {
@@ -3241,6 +3248,15 @@ sub finish_edit_sample {
     print_error("Lanes required must be a number between $lanes_run and 20");
     return;
   }
+
+  # Hidden
+  # For a normal user we just take the existing_sample_hidden value
+  # for an admin we take the value from the form
+  my $sample_hidden = $original_is_hidden;
+  if ($session->param("is_admin")) {
+      $sample_hidden = $q -> param("sample_hidden")?1:0;
+  }
+
 
   # Database
   my $db_id=$q->param("database");
@@ -3466,7 +3482,7 @@ sub finish_edit_sample {
 
   if ($sample_id) {
 
-    $dbh->do("UPDATE sample set person_id=?,users_sample_name=?,sample_type_id=?,lanes_required=?,adapter_id=?,budget_code=?,search_database_id=?,is_complete=?,is_suitable_control=? WHERE id=?",undef,($new_person_id,$sample_name,$sample_type_id,$lanes_required,$adapter_id,$budget_code,$db_id,$original_is_complete,$is_control,$sample_id)) or do {
+    $dbh->do("UPDATE sample set person_id=?,users_sample_name=?,is_hidden=?,sample_type_id=?,lanes_required=?,adapter_id=?,budget_code=?,search_database_id=?,is_complete=?,is_suitable_control=? WHERE id=?",undef,($new_person_id,$sample_name,$sample_hidden,$sample_type_id,$lanes_required,$adapter_id,$budget_code,$db_id,$original_is_complete,$is_control,$sample_id)) or do {
       print_bug("Couldn't update sample details: ".$dbh->errstr());
       return;
     };
