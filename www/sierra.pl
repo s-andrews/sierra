@@ -3090,9 +3090,11 @@ sub edit_sample {
   }
 
   # See if any of the codes here matches the one in the database
-  foreach my $code (@budget_codes) {
-      if ($code->{CODE} eq $budget_code) {
-	  $code->{SELECTED} = 1;
+  if ($budget_code) {
+      foreach my $code (@budget_codes) {
+	  if ($code->{CODE} eq $budget_code) {
+	      $code->{SELECTED} = 1;
+	  }
       }
   }
       
