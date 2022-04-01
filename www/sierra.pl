@@ -2492,7 +2492,7 @@ sub view_sample {
   };
 
   while (my ($lane_id,$lane_number,$run_folder,$flowcell_id,$date) = $results_sth->fetchrow_array()) {
-    if ($session -> param("is_admin")) {
+    if (scalar $session -> param("is_admin")) {
       push @results, {
 		      DATE => $date,
 		      FLOWCELL_ID => $flowcell_id,
