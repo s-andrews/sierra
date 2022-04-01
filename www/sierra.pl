@@ -2449,7 +2449,7 @@ sub view_sample {
 
 
   # Now add any notes
-  my $notes_sth = $dbh->prepare("SELECT sample_note.id,person.first_name,person.last_name,DATE_FORMAT(sample_note.date,'%e %b %Y'),sample_note.note, sample_note.filename FROM sample_note,person WHERE sample_note.sample_id=? AND sample_note.person_id=person.id ORDER BY sample_note.date");
+  my $notes_sth = $dbh->prepare("SELECT sample_note.id,person.first_name,person.last_name,DATE_FORMAT(sample_note.date,'%e %b %Y'),sample_note.note FROM sample_note,person WHERE sample_note.sample_id=? AND sample_note.person_id=person.id ORDER BY sample_note.date");
 
   $notes_sth -> execute($sample_id) or do {
     print_bug("Can't get notes for sample '$sample_id': ".$dbh->errstr());
@@ -2457,13 +2457,8 @@ sub view_sample {
   };
 
   my @notes;
-  while (my ($note_id,$first,$last,$date,$text,$filename) = $notes_sth->fetchrow_array()) {
+  while (my ($note_id,$first,$last,$date,$text) = $notes_sth->fetchrow_array()) {
     my @paragraphs;
-
-    # The filename has a timestamp on the front.  We'll hide this
-    # when we show it to use the user.
-    my $viewname = $filename;
-    $viewname =~ s/^\d+_//;
 
     # Admins are allowed to delete notes
     my $is_admin = 0;
@@ -2478,8 +2473,6 @@ sub view_sample {
 		  LAST_NAME => $last,
 		  DATE => $date,
 		  PARAGRAPHS => \@paragraphs,
-		  FILENAME => $filename,
-		  VIEWNAME => $viewname,
 		  SAMPLE_ID => $sample_id,
 		  NOTE_ID => $note_id,
 		  IS_ADMIN => $is_admin
