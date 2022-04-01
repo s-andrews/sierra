@@ -2235,7 +2235,7 @@ sub view_lane {
     $prime5 = (sort{$a cmp $b} (split(/\:/,$prime5)))[0] if ($prime5);
     $prime3 = (sort{$a cmp $b} (split(/\:/,$prime3)))[0] if ($prime3);
 
-    if ($id == $barcode_id) {
+    if ($barcode_id && $id == $barcode_id) {
       push @barcode_sequences, $prime5 if ($prime5);
       push @barcode_sequences, $prime3 if ($prime3);
       $selected = 1;
