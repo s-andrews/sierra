@@ -3246,9 +3246,13 @@ sub finish_edit_sample {
   }
 
   # Hidden
-  # For a normal user we just take the existing_sample_hidden value
-  # for an admin we take the value from the form
-  my $sample_hidden = $original_is_hidden;
+  # For a normal user we either take the existing_sample_hidden value
+  # if there is one, or we make it false.  For an admin we take the value 
+  # from the form
+  my $sample_hidden = 0;
+  if ($sample_id) {
+      $sample_hidden = $original_is_hidden;
+  }
   if ($session->param("is_admin")) {
       $sample_hidden = $q -> param("sample_hidden")?1:0;
   }
