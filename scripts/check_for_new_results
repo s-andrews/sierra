@@ -142,19 +142,22 @@ foreach (keys %updated_runs) {
 
 # Now get the sample details for each user
 
-my $sample_details_sth = $dbh->prepare("SELECT person.email,person.first_name,person.last_name,lane.id,sample.id,sample.users_sample_name FROM lane,flowcell,run,sample,person WHERE lane.lane_number=? AND lane.flowcell_id=flowcell.id AND run.id=? AND run.flowcell_id=flowcell.id AND lane.sample_id=sample.id AND sample.person_id=person.id");
+my $sample_details_sth = $dbh->prepare("SELECT person.email,person.first_name,person.last_name,lane.id,sample.id,sample.users_sample_name, sample.is_hidden FROM lane,flowcell,run,sample,person WHERE lane.lane_number=? AND lane.flowcell_id=flowcell.id AND run.id=? AND run.flowcell_id=flowcell.id AND lane.sample_id=sample.id AND sample.person_id=person.id");
 
 foreach my $run_id (keys %updated_runs) {
   foreach my $lane_number (@{$updated_runs{$run_id}}) {
 
     $sample_details_sth -> execute($lane_number,$run_id) or die "Failed to get sample details for lane $lane_number and run $run_id:".$dbh->errstr();
 
-    while (my ($email,$first,$last,$lane_id,$sample_id,$sample_name) = $sample_details_sth -> fetchrow_array()) {
+    while (my ($email,$first,$last,$lane_id,$sample_id,$sample_name,$is_hidden) = $sample_details_sth -> fetchrow_array()) {
 	
-      push @{$per_user_reports{$email}->{$run_id}},{LANE_ID => $lane_id, SAMPLE_ID => $sample_id, SAMPLE_NAME => $sample_name};
+      # We don't show stuff to the user if the sample is still hidden
+      unless ($is_hidden) {
+        push @{$per_user_reports{$email}->{$run_id}},{LANE_ID => $lane_id, SAMPLE_ID => $sample_id, SAMPLE_NAME => $sample_name};
+      }
 
       # We also add everything to the list of people who
-      # want to be notified
+      # want to be notified, even if the sample is hidden
       foreach my $notified(@Sierra::Constants::NOTIFY_ABOUT_RUNS) {
 	push @{$per_user_reports{$notified}->{$run_id}},{LANE_ID => $lane_id, SAMPLE_ID => $sample_id, SAMPLE_NAME => $sample_name, USER_NAME => "$first $last"};
       }
