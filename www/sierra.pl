@@ -5914,18 +5914,34 @@ sub get_valid_budget_list {
   # been assigned by an admin), so that we don't wipe stuff out by
   # accident.
 
+  # We have an issue that we look up budgets via their email. Some
+  # people are using username@babraham.ac.uk as their email instead
+  # of first.last@babraham.ac.uk which is what the budget database
+  # expects so we'll put in a kludge to try to work around that.
+
   # Check to see if there's a budget database defined
   if ($Sierra::Constants::BUDGET_DB_NAME) {
 
     my $email;
+    my $first_name;
+    my $last_name;
 
     if ($person_id) {
       # Get the email of the person we're looking at
-      ($email) = $dbh->selectrow_array("SELECT email from person where id=?",undef,($person_id));
+      ($email,$first_name,$last_name) = $dbh->selectrow_array("SELECT email,first_name,last_name from person where id=?",undef,($person_id));
       unless ($email) {
 	print_bug("Couldn't get email for person id $person_id");
 	return;
       }
+
+      # Check to see if we have a short form babraham email and if so
+      # let's try to fake a long form one.
+      if ($email =~ /^[^\.]*\@babraham.ac.uk/) {
+	  $email = "${first_name}.${last_name}\@babraham.ac.uk";
+	  # We also need to remove spaces or quotes from the email
+	  $email =~ s/[ \']//g;
+      }
+
     }
 
     my $budget_dbh = DBI->connect("DBI:mysql:database=$Sierra::Constants::BUDGET_DB_NAME;host=$Sierra::Constants::BUDGET_DB_SERVER",$Sierra::Constants::BUDGET_DB_USERNAME,$Sierra::Constants::BUDGET_DB_PASSWORD,{RaiseError=>0,AutoCommit=>1});
