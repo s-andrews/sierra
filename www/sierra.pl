@@ -37,6 +37,8 @@ use List::Util qw(shuffle);
 use Date::Calc qw(Delta_Days Today check_date);
 use Sierra::IlluminaRun;
 use Data::Dumper;
+use Encode;
+use Encode::Guess qw/euc-jp shiftjis 7bit-jis/;
 
 # This is the script which controls the normal user interface
 # of the sierra system for managing next genreation sequencing
@@ -3364,6 +3366,11 @@ sub finish_edit_sample {
       $all_text .= $_;
     }
 
+    # The data might be encoded so we use Encode::Guess to fix
+    # this before parsing
+
+    $all_text = decode("Guess",$all_text);
+
     my @lines = split(/[\r\n]+/,$all_text);
 
     # This is going to record the lengths of the codes for
@@ -3373,7 +3380,7 @@ sub finish_edit_sample {
 
     foreach (@lines) {
 
-      next unless ($_);
+      next unless (/\S/);
 
       my ($desc,$barcode5,$barcode3) = split(/\t/);
 
@@ -3388,7 +3395,7 @@ sub finish_edit_sample {
       $barcode3 = uc($barcode3);
 
       unless ($barcode5 or $barcode3) {
-	print_error("No barcode supplied for sample '$desc'");
+	print_error("No barcode supplied for sample '$desc' on '$_'");
 	return;
       }
 
