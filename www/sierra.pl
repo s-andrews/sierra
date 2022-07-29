@@ -3392,6 +3392,13 @@ sub finish_edit_sample {
 	return;
       }
 
+      # Strip leading / trailing spaces
+      $barcode5 =~ s/^\s+//;
+      $barcode5 =~ s/\s+$//;
+      $barcode3 =~ s/^\s+//;
+      $barcode3 =~ s/\s+$//;
+
+
       if ($barcode5 and $barcode5 !~ /^[GATC\:]+$/) {
 	# Try to look up the barcode as an alias
 	$barcode5 = get_barcode_for_alias($barcode5);
@@ -3417,11 +3424,11 @@ sub finish_edit_sample {
 
       if ($first_barcode) {
 	if (length($barcode5) != $first_barcode->[0]) {
-	  print_error("First barcodes didn't all have the same length");
+	  print_error("First barcodes didn't all have the same length ".length($barcode5)." vs ".$first_barcode->[0]." for '$barcode5' on $_");
 	  return;
 	}
 	if (length($barcode3) != $first_barcode->[1]) {
-	  print_error("Second barcodes didn't all have the same length");
+	  print_error("Second barcodes didn't all have the same length ".length($barcode3)." vs ".$first_barcode->[1]." for '$barcode3' on $_");
 	  return;
 	}
 	
