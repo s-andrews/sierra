@@ -332,6 +332,28 @@ sub get_files_for_lane {
       push @files, new Sierra::ResultFile($name,$file,'FastQ sequence file');
     }
 
+    # Cloupe files
+    elsif ($name =~ /\.cloupe$/) {
+      push @files, new Sierra::ResultFile($name,$file,'Loupe Cell Browser File');
+    }
+
+    # Cellranger tar files
+    elsif ($name =~ /cellranger.tar$/) {
+      push @files, new Sierra::ResultFile($name,$file,'All Cellranger Output');
+    }
+
+
+    # Cellranger count matrices
+    elsif ($name =~ /filtered_feature_bc_matrix.h5$/) {
+      push @files, new Sierra::ResultFile($name,$file,'Cellranger Gene Counts');
+    }
+
+    # Cellranger molecule info
+    elsif ($name =~ /molecule_info.h5$/) {
+      push @files, new Sierra::ResultFile($name,$file,'Cellranger Molecule Info');
+    }
+
+    
     # Generic Image files (mostly to get the right mime-type)
     elsif ($name =~ /.png$/) {
       push @files, new Sierra::ResultFile($name,$file,'PNG Image','image/png');
