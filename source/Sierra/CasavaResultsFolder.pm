@@ -333,7 +333,7 @@ sub get_files_for_lane {
     }
 
     # Cloupe files
-    elsif ($name =~ /\.cloupe$/) {
+    elsif ($name =~ /\.[cv]loupe$/) {
       push @files, new Sierra::ResultFile($name,$file,'Loupe Cell Browser File');
     }
 
