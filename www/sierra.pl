@@ -3919,7 +3919,7 @@ sub new_flowcell {
     $template->param(RUN_TYPE=>$run_type);
 
 
-    my $get_lane_details_sth = $dbh->prepare("SELECT lane.id,sample.id,lane.use_as_control,sample.users_sample_name,sample.search_database_id,sample.sample_type_id,person.first_name,person.last_name FROM lane,sample,person WHERE lane.sample_id=sample.id AND sample.person_id=person.id AND lane.flowcell_id=? AND lane.lane_number=?");
+    my $get_lane_details_sth = $dbh->prepare("SELECT lane.id,sample.id,sample.users_sample_name,sample.search_database_id,sample.sample_type_id,person.first_name,person.last_name FROM lane,sample,person WHERE lane.sample_id=sample.id AND sample.person_id=person.id AND lane.flowcell_id=? AND lane.lane_number=?");
 
     for my $lane_number (1..$lane_count) {
 
@@ -3928,7 +3928,7 @@ sub new_flowcell {
 	return;
       };
 
-      my ($lane_id,$sample_id,$control,$sample_name,$search_db_id,$sample_type_id,$first,$last) = $get_lane_details_sth ->fetchrow_array();
+      my ($lane_id,$sample_id,$sample_name,$search_db_id,$sample_type_id,$first,$last) = $get_lane_details_sth ->fetchrow_array();
 
       my $sample_type = '[Unknown]';
 
@@ -3954,7 +3954,6 @@ sub new_flowcell {
 		    SAMPLE_NAME => $sample_name,
 		    SAMPLE_TYPE => $sample_type,
 		    SEARCH_DB => $search_db,
-		    IS_CONTROL => $control,
 		    OWNER => "$first $last",
 		    RUN_ID => $run_id,
       };
@@ -4010,6 +4009,44 @@ sub new_flowcell {
 
     $template -> param(AVAILABLE_SAMPLES => \@available_samples);
 
+    # We also want a list of samples which are ready but which aren't from this run type
+    # since we sometimes want to run an incorrect sample (for example for a QC run).
+
+    # TODO: List other available samples.
+
+
+    my @other_samples;
+
+    my $other_samples_sth = $dbh->prepare("SELECT sample.id,sample.users_sample_name,person.first_name,person.last_name,DATE_FORMAT(passed_qc_date,'%e %b %Y'),sample.lanes_required FROM sample,person WHERE sample.is_complete != 1 AND sample.passed_qc_date IS NOT NULL AND sample.run_type_id!=? AND sample.person_id=person.id");
+
+
+    $other_samples_sth -> execute($run_type_id) or do {
+      print_bug("Failed to list available samples: ".$dbh->errstr());
+      return;
+    };
+
+    while (my ($sample_id,$name,$first,$last,$passed_qc,$requested) = $other_samples_sth->fetchrow_array()) {
+
+      $count_used_lanes_sth -> execute($sample_id) or do {
+	print_bug("Couldn't count lanes used by sample '$sample_id': ".$dbh->errstr());
+	return;
+      };
+
+      my ($lanes_run) = $count_used_lanes_sth->fetchrow_array();
+
+      push @other_samples, {
+				SAMPLE_ID => $sample_id,
+				NAME => $name,
+				OWNER => "$first $last",
+				PASSED_QC => $passed_qc,
+				LANES_REQUESTED => $requested,
+				FREE_LANES => \@free_lanes,
+				LANES_RUN => $lanes_run,
+				FLOWCELL_ID => $flowcell_id,
+			       };
+    }
+
+    $template -> param(OTHER_SAMPLES => \@other_samples);
 
   }
 
@@ -4070,7 +4107,7 @@ sub new_flowcell {
 
       my @runtypes;
 
-      my $runtypes_sth = $dbh->prepare("SELECT id,name FROM run_type");
+      my $runtypes_sth = $dbh->prepare("SELECT id,name FROM run_type WHERE NOT retired");
       $runtypes_sth -> execute() or do {
 	print_bug("Can't get list of run_types: ".$dbh->errstr());
 	return;
@@ -4101,7 +4138,7 @@ sub new_flowcell {
 			 ID => $id,
 			 NAME => $name,
 			 PENDING_COUNT=> $total_pending,
-			} if ($total_pending > 0);
+			};
       }
 
       $template->param(RUN_TYPES => \@runtypes);
@@ -4360,8 +4397,9 @@ sub add_lane {
 
   my ($lane_count,$lanes_required); # Need to declare these, even though we only use them if this isn't a control
 
-
-  ($lane_count,$lanes_required) = $dbh->selectrow_array("SELECT flowcell.available_lanes,sample.lanes_required FROM flowcell,sample WHERE sample.id=? AND sample.is_complete != 1 AND flowcell.id=? AND sample.run_type_id=flowcell.run_type_id",undef,($sample_id,$flowcell_id));
+  # We used to validate the sample type matched the flowcell type, but we now
+  # allow samples to be added to the wrong flowcell for QC runs
+  ($lane_count,$lanes_required) = $dbh->selectrow_array("SELECT flowcell.available_lanes,sample.lanes_required FROM flowcell,sample WHERE sample.id=? AND sample.is_complete != 1 AND flowcell.id=?",undef,($sample_id,$flowcell_id));
 
   unless ($lane_count) {
       print_bug("Couldn't confirm that sample '$sample_id' is compatible with flowcell '$flowcell_id':".$dbh->errstr());
