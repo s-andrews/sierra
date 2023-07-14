@@ -56,7 +56,7 @@
 
   <table>
     <tr>
-      <th>Lane<br>(*control)</th>
+      <th>Lane</th>
       <th>Sample ID</th>
       <th>User Sample Name</th>
       <th>Barcodes</th>
@@ -71,7 +71,7 @@
     </tr>
     <!-- TMPL_LOOP NAME=LANES -->
     <tr>
-      <td><!-- TMPL_IF NAME=IS_CONTROL -->*<!-- /TMPL_IF --><!-- TMPL_VAR NAME=LANE ESCAPE=HTML --></td>
+      <td><!-- TMPL_VAR NAME=LANE ESCAPE=HTML --></td>
       <!-- TMPL_IF NAME=SAMPLE_ID -->
       <td><a href="sierra.pl?action=view_sample&amp;sample_id=<!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML -->">Sample <!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML --></a></td>
       <td><!-- TMPL_VAR NAME=SAMPLE_NAME ESCAPE=HTML --></td>
@@ -93,6 +93,10 @@
 
   <!-- TMPL_IF NAME=FREE_LANES -->
 
+  <!-- TMPL_IF NAME=RUN_ID -->
+
+
+  <!-- TMPL_ELSE -->
 
   <h3>Matched Samples</h3>
 
@@ -183,12 +187,13 @@
   </table>  
 
 
-  <!-- TMPL_ELSE -->
-
+  <!-- /TMPL_IF -->
   <!-- TMPL_IF NAME=RUN_ID -->
 
 
   <!-- TMPL_ELSE -->
+
+
   <form action="sierra.pl" method="GET"><input type="hidden" name="action" value="create_run">
     <input type="hidden" name="flowcell_id" value="<!-- TMPL_VAR NAME=FLOWCELL_ID ESCAPE=HTML -->">
     <p class="center">
