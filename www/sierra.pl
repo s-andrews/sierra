@@ -2,7 +2,7 @@
 
 ##########################################################################
 #                                                                        #
-# Copyright 2011-20, Simon Andrews (simon.andrews@babraham.ac.uk)        #
+# Copyright 2011-23, Simon Andrews (simon.andrews@babraham.ac.uk)        #
 #                                                                        #
 # This file is part of Sierra.                                           #
 #                                                                        #
@@ -791,7 +791,7 @@ sub finish_new_run {
   # Send emails out to the people on the run telling them that a run has
   # been started
 
-  my $users_on_this_flowcell_sth = $dbh->prepare("select sample_id,sample.users_sample_name,person.email, person.first_name, person.last_name from lane,sample,person where lane.flowcell_id=? and lane.sample_id=sample.id and sample.person_id = person.id and sample.is_suitable_control != 1");
+  my $users_on_this_flowcell_sth = $dbh->prepare("select sample_id,sample.users_sample_name,person.email, person.first_name, person.last_name from lane,sample,person where lane.flowcell_id=? and lane.sample_id=sample.id and sample.person_id = person.id");
 
   $users_on_this_flowcell_sth -> execute($flowcell_id) or do {
     print_bug("Couldn't get sample list for flowcell $flowcell_id: ".$dbh->errstr());
@@ -1438,7 +1438,7 @@ sub run_people_search {
     return;
   };
 
-  my $sample_count_sth = $dbh->prepare("SELECT count(*) FROM sample WHERE person_id=? AND is_suitable_control=0 AND is_complete=?");
+  my $sample_count_sth = $dbh->prepare("SELECT count(*) FROM sample WHERE person_id=? AND is_complete=?");
 
 
   my @people;
@@ -2904,11 +2904,11 @@ sub edit_sample {
   }
 
   # We can now get the details for this sample
-  my ($person_id,$user_sample_name,$sample_hidden,$sample_type_id,$lanes_requested,$adapter_id,$budget_code,$run_type,$search_id,$is_complete,$is_control);
+  my ($person_id,$user_sample_name,$sample_hidden,$sample_type_id,$lanes_requested,$adapter_id,$budget_code,$run_type,$search_id,$is_complete,$run_qc_lane);
   my $lanes_run;
   if ($sample_id) {
 
-    ($person_id,$user_sample_name,$sample_hidden,$sample_type_id,$lanes_requested,$adapter_id,$budget_code,$run_type,$search_id,$is_complete,$is_control) = $dbh->selectrow_array("SELECT sample.person_id,sample.users_sample_name,sample.is_hidden,sample.sample_type_id,sample.lanes_required,sample.adapter_id,sample.budget_code,run_type.id,sample.search_database_id,sample.is_complete,sample.is_suitable_control FROM sample,run_type WHERE sample.id=? AND sample.run_type_id=run_type.id",undef,($sample_id));
+    ($person_id,$user_sample_name,$sample_hidden,$sample_type_id,$lanes_requested,$adapter_id,$budget_code,$run_type,$search_id,$is_complete,$run_qc_lane) = $dbh->selectrow_array("SELECT sample.person_id,sample.users_sample_name,sample.is_hidden,sample.sample_type_id,sample.lanes_required,sample.adapter_id,sample.budget_code,run_type.id,sample.search_database_id,sample.is_complete,sample.run_qc_lane FROM sample,run_type WHERE sample.id=? AND sample.run_type_id=run_type.id",undef,($sample_id));
 
     unless ($person_id) {
       print_bug("Couldn't fetch details for sample '$sample_id':".$dbh->errstr());
@@ -3154,9 +3154,6 @@ sub edit_sample {
     }
     $template->param(USERS => \@users);
 
-    # As an admin we can also mark a sample as a control
-    $template->param(CONTROL => $is_control);
-
   }
 
   my $force_complete = 0;
@@ -3172,6 +3169,7 @@ sub edit_sample {
 		     ADAPTERS => \@adapter_types,
 		     SAMPLE_TYPES => \@sample_types,
 		     DATABASES => \@databases,
+		     QCLANE => $run_qc_lane,
 		    );
 
 
@@ -3188,7 +3186,7 @@ sub finish_edit_sample {
 
   my $lanes_run = 0;
 
-  my ($person_id,$original_lanes_requested,$original_is_complete,$original_is_hidden);
+  my ($person_id,$original_lanes_requested,$original_is_complete,$original_is_hidden,$original_run_qc_lane);
 
   if ($sample_id) {
     unless ($sample_id =~ /^\d+$/) {
@@ -3197,7 +3195,7 @@ sub finish_edit_sample {
     }
 
     # We can now get some of the details for this sample
-    ($person_id,$original_lanes_requested,$original_is_complete,$original_is_hidden) = $dbh->selectrow_array("SELECT sample.person_id,sample.lanes_required,sample.is_complete,sample.is_hidden FROM sample WHERE sample.id=?",undef,($sample_id));
+    ($person_id,$original_lanes_requested,$original_is_complete,$original_is_hidden,$original_run_qc_lane) = $dbh->selectrow_array("SELECT sample.person_id,sample.lanes_required,sample.is_complete,sample.is_hidden,sample.run_qc_lane FROM sample WHERE sample.id=?",undef,($sample_id));
 
 
     unless ($person_id) {
@@ -3246,6 +3244,18 @@ sub finish_edit_sample {
     print_error("Lanes required must be a number between $lanes_run and 20");
     return;
   }
+
+  # Whether they want a qc lane
+  my $run_qc_lane = $q -> param("qclane")?1:0;
+  if ($sample_id and $run_qc_lane != $original_run_qc_lane) {
+      # TODO: We work out if we need to increase/decrease the 
+      # number of lanes
+  }
+  elsif (!$sample_id and $run_qc_lane) {
+      # We add a lane if they ask for a qc lane
+      $lanes_required++;
+  }
+
 
   # Hidden
   # For a normal user we either take the existing_sample_hidden value
@@ -3316,14 +3326,9 @@ sub finish_edit_sample {
   # sample with
 
   my $new_person_id = $person_id;
-  my $is_control = 0;
 
   if ($session->param("is_admin")) {
     $new_person_id = $q->param("user");
-
-    if ($q->param("control")) {
-	$is_control = 1;
-    }
 
   }
 
@@ -3496,7 +3501,7 @@ sub finish_edit_sample {
 
   if ($sample_id) {
 
-    $dbh->do("UPDATE sample set person_id=?,users_sample_name=?,is_hidden=?,sample_type_id=?,lanes_required=?,adapter_id=?,budget_code=?,search_database_id=?,is_complete=?,is_suitable_control=? WHERE id=?",undef,($new_person_id,$sample_name,$sample_hidden,$sample_type_id,$lanes_required,$adapter_id,$budget_code,$db_id,$original_is_complete,$is_control,$sample_id)) or do {
+    $dbh->do("UPDATE sample set person_id=?,users_sample_name=?,is_hidden=?,sample_type_id=?,lanes_required=?,adapter_id=?,budget_code=?,search_database_id=?,is_complete=?,run_qc_lane=? WHERE id=?",undef,($new_person_id,$sample_name,$sample_hidden,$sample_type_id,$lanes_required,$adapter_id,$budget_code,$db_id,$original_is_complete,$run_qc_lane,$sample_id)) or do {
       print_bug("Couldn't update sample details: ".$dbh->errstr());
       return;
     };
@@ -3505,7 +3510,7 @@ sub finish_edit_sample {
   else {
     $made_new_sample = 1;
 
-    $dbh->do("INSERT INTO sample (person_id,users_sample_name,is_hidden,sample_type_id,lanes_required,adapter_id,budget_code,search_database_id,is_complete,is_suitable_control,submitted_date) VALUES (?,?,?,?,?,?,?,?,0,?,NOW())",undef,($new_person_id,$sample_name,$sample_hidden,$sample_type_id,$lanes_required,$adapter_id,$budget_code,$db_id,$is_control)) or do {
+    $dbh->do("INSERT INTO sample (person_id,users_sample_name,is_hidden,sample_type_id,lanes_required,adapter_id,budget_code,search_database_id,is_complete,run_qc_lane,submitted_date) VALUES (?,?,?,?,?,?,?,?,0,?,NOW())",undef,($new_person_id,$sample_name,$sample_hidden,$sample_type_id,$lanes_required,$adapter_id,$budget_code,$db_id,$run_qc_lane)) or do {
       print_bug("Couldn't create sample: ".$dbh->errstr());
       return;
     };
@@ -3524,14 +3529,6 @@ sub finish_edit_sample {
       };
     }
 
-    # If the sample is a control then it doesn't need to be received and we can flag it as
-    # received immediately
-    if ($is_control) {
-	$dbh->do("UPDATE sample set received_date=NOW(),received_by_person_id=? WHERE id=?",undef,($session->param("person_id"),$sample_id)) or do {
-	    print_bug("Failed to set received date on control sample: ".$dbh->errstr());
-	    return;
-	};
-    }
 
   }
 
@@ -3964,7 +3961,7 @@ sub new_flowcell {
 
       unless ($sample_id) {
 	push @free_lanes, {
-			   LANE_NUMBER => $lane_number,
+	       	   LANE_NUMBER => $lane_number,
 			  };
       }
 
@@ -3976,20 +3973,6 @@ sub new_flowcell {
     # We also need to list the samples which could potentially be added to this
     # flowcell
 
-    my @controls;
-    my $available_controls_sth = $dbh->prepare("SELECT id,users_sample_name FROM sample WHERE sample.is_suitable_control = 1 ");
-    $available_controls_sth -> execute() or do {
-      print_bug("Failed to list available controls: ".$dbh->errstr());
-      return;
-    };
-    while (my ($sample_id,$sample_name) = $available_controls_sth->fetchrow_array()) {
-      push @controls,{SAMPLE_ID => $sample_id,
-		      NAME=> $sample_name,
-		      FLOWCELL_ID=>$flowcell_id,
-		      FREE_LANES => \@free_lanes};
-    }
-
-    $template -> param("AVAILABLE_CONTROLS" => \@controls);
 
     my @available_samples;
 
@@ -4093,7 +4076,7 @@ sub new_flowcell {
 	return;
       };
 
-      my $pending_samples_sth = $dbh->prepare("SELECT id,lanes_required FROM sample WHERE run_type_id=? AND is_complete=0 AND received_date IS NOT NULL AND is_suitable_control=0 AND passed_qc_date IS NOT NULL");
+      my $pending_samples_sth = $dbh->prepare("SELECT id,lanes_required FROM sample WHERE run_type_id=? AND is_complete=0 AND received_date IS NOT NULL AND passed_qc_date IS NOT NULL");
       my $allocated_lanes_sth = $dbh->prepare("SELECT count(*) from lane WHERE sample_id=?");
 
       while (my ($id,$name) = $runtypes_sth->fetchrow_array()) {
@@ -4375,28 +4358,22 @@ sub add_lane {
   # We need to check that this sample is suitable for this flowcell (and
   # also check the ids at the same time
 
-  # If this is a control sample we don't need to do this, so check that
-  # first.
-
-  my ($is_control) = $dbh->selectrow_array("SELECT is_suitable_control FROM sample WHERE id=?",undef,($sample_id));
-
   my ($lane_count,$lanes_required); # Need to declare these, even though we only use them if this isn't a control
 
-  if (! $is_control) {
 
-    ($lane_count,$lanes_required) = $dbh->selectrow_array("SELECT flowcell.available_lanes,sample.lanes_required FROM flowcell,sample WHERE sample.id=? AND sample.is_complete != 1 AND flowcell.id=? AND sample.run_type_id=flowcell.run_type_id",undef,($sample_id,$flowcell_id));
+  ($lane_count,$lanes_required) = $dbh->selectrow_array("SELECT flowcell.available_lanes,sample.lanes_required FROM flowcell,sample WHERE sample.id=? AND sample.is_complete != 1 AND flowcell.id=? AND sample.run_type_id=flowcell.run_type_id",undef,($sample_id,$flowcell_id));
 
-    unless ($lane_count) {
+  unless ($lane_count) {
       print_bug("Couldn't confirm that sample '$sample_id' is compatible with flowcell '$flowcell_id':".$dbh->errstr());
       return;
-    }
+  }
 
-    # Check that the requested lane number is possible
-    unless ($lane_number =~ /^\d+$/ and $lane_number >=1 and $lane_number <= $lane_count) {
+  # Check that the requested lane number is possible
+  unless ($lane_number =~ /^\d+$/ and $lane_number >=1 and $lane_number <= $lane_count) {
       print_bug("Lane '$lane_number' can't be on a flowcell with $lane_count lanes");
       return;
-    }
   }
+  
 
   # Check that there's nothing in this lane already
   my ($lane_taken) = $dbh->selectrow_array("SELECT id FROM lane WHERE flowcell_id=? AND lane_number=?",undef,($flowcell_id,$lane_number));
@@ -4407,43 +4384,29 @@ sub add_lane {
 
   my $lanes_already_run; # Only used for non-control samples
 
-  if (!$is_control) {
-    # Check that we actually need to add some more lanes from this sample
-    ($lanes_already_run) = $dbh->selectrow_array("SELECT count(*) FROM lane WHERE sample_id=?",undef,($sample_id));
-
-    if ($lanes_already_run >= $lanes_required) {
+  # Check that we actually need to add some more lanes from this sample
+  ($lanes_already_run) = $dbh->selectrow_array("SELECT count(*) FROM lane WHERE sample_id=?",undef,($sample_id));
+  
+  if ($lanes_already_run >= $lanes_required) {
       print_error("This sample already seems to have been completely run.  Refresh the page to update the sample counts");
       return;
-    }
-  }
-
-  # If this is a control sample then check if this flowcell already
-  # has a control sample on it.  If not then use this one.
-  my ($control_lane_id) = $dbh->selectrow_array("SELECT id FROM lane WHERE flowcell_id=? AND use_as_control=1",undef,($flowcell_id));
-
-  my $use_as_control = 0;
-
-  if ($is_control and !$control_lane_id) {
-    $use_as_control = 1;
   }
 
 
   # Now we can make the new lane
-  $dbh->do("INSERT INTO lane (flowcell_id,sample_id,lane_number,use_as_control) values (?,?,?,?)",undef,($flowcell_id,$sample_id,$lane_number,$use_as_control)) or do {
+  $dbh->do("INSERT INTO lane (flowcell_id,sample_id,lane_number) values (?,?,?)",undef,($flowcell_id,$sample_id,$lane_number)) or do {
     print_bug("Can't create new lane for sample '$sample_id' on flowcell '$flowcell_id': ".$dbh->errstr());
   };
 
 
-  if (!$is_control) {
-    # Finally, if this was the last lane required for this sample, mark the
-    # sample as complete.
-
-    if ($lanes_already_run+1 == $lanes_required) {
+  # Finally, if this was the last lane required for this sample, mark the
+  # sample as complete.
+  
+  if ($lanes_already_run+1 == $lanes_required) {
       $dbh->do("UPDATE sample SET is_complete=1 WHERE id=?",undef,($sample_id)) or do {
-	print_bug("Can't flag sample '$sample_id' as complete: ".$dbh->errstr());
-	return;
+	  print_bug("Can't flag sample '$sample_id' as complete: ".$dbh->errstr());
+	  return;
       }
-    }
   }
 
   # Now send them back to the flowcell construction view.
@@ -5616,7 +5579,7 @@ sub show_home_page {
 
   # Admins don't get this. Normal users only see their own
 
-    $active_samples_sth = $dbh->prepare("SELECT sample.id,sample.users_sample_name,sample.lanes_required,DATE_FORMAT(sample.received_date,'%e %b %Y'),DATE_FORMAT(sample.passed_qc_date,'%e %b %Y'),run_type.name FROM sample,run_type WHERE sample.person_id=? AND sample.run_type_id=run_type.id AND sample.is_complete != 1 AND sample.is_suitable_control != 1 ORDER BY submitted_date DESC");
+    $active_samples_sth = $dbh->prepare("SELECT sample.id,sample.users_sample_name,sample.lanes_required,DATE_FORMAT(sample.received_date,'%e %b %Y'),DATE_FORMAT(sample.passed_qc_date,'%e %b %Y'),run_type.name FROM sample,run_type WHERE sample.person_id=? AND sample.run_type_id=run_type.id AND sample.is_complete != 1 ORDER BY submitted_date DESC");
 
     $active_samples_sth -> execute($session->param("person_id")) or do {
       print_bug("Couldn't get list of active samples: ".$dbh->errstr());
@@ -5770,7 +5733,7 @@ sub show_queue {
   # Admins get full details. Normal users see a reduced summary
 
   if ($session -> param("is_admin")) {
-    $active_samples_sth = $dbh->prepare("SELECT sample.id,sample.users_sample_name,sample.lanes_required,DATE_FORMAT(sample.received_date,'%e %b %Y'),DATE_FORMAT(sample.passed_individual_qc_date,'%e %b %Y'),DATE_FORMAT(sample.passed_qc_date,'%e %b %Y'),person.first_name,person.last_name,run_type.name FROM sample,person,run_type WHERE  sample.is_complete != 1 AND sample.person_id=person.id AND sample.run_type_id=run_type.id AND sample.is_suitable_control != 1 ORDER BY sample.submitted_date");
+    $active_samples_sth = $dbh->prepare("SELECT sample.id,sample.users_sample_name,sample.lanes_required,DATE_FORMAT(sample.received_date,'%e %b %Y'),DATE_FORMAT(sample.passed_individual_qc_date,'%e %b %Y'),DATE_FORMAT(sample.passed_qc_date,'%e %b %Y'),person.first_name,person.last_name,run_type.name FROM sample,person,run_type WHERE  sample.is_complete != 1 AND sample.person_id=person.id AND sample.run_type_id=run_type.id ORDER BY sample.submitted_date");
 
     $active_samples_sth -> execute() or do {
       print_bug("Couldn't get list of active admin samples: ".$dbh->errstr());
@@ -5854,7 +5817,7 @@ sub show_queue {
     my @queue;
 
     # Collect a list of the samples which are still active
-    my $queue_active_samples_sth = $dbh->prepare("SELECT sample.id,sample.lanes_required,DATE_FORMAT(sample.submitted_date,'%e %b %Y'),DATE_FORMAT(sample.received_date,'%e %b %Y'),DATE_FORMAT(sample.passed_qc_date,'%e %b %Y'),run_type.name,person.first_name,person.last_name,person.anonymous FROM sample,person,run_type WHERE  sample.is_complete != 1 AND sample.run_type_id=run_type.id AND sample.person_id=person.id AND sample.is_suitable_control != 1 ORDER BY run_type.name, sample.submitted_date DESC");
+    my $queue_active_samples_sth = $dbh->prepare("SELECT sample.id,sample.lanes_required,DATE_FORMAT(sample.submitted_date,'%e %b %Y'),DATE_FORMAT(sample.received_date,'%e %b %Y'),DATE_FORMAT(sample.passed_qc_date,'%e %b %Y'),run_type.name,person.first_name,person.last_name,person.anonymous FROM sample,person,run_type WHERE  sample.is_complete != 1 AND sample.run_type_id=run_type.id AND sample.person_id=person.id ORDER BY run_type.name, sample.submitted_date DESC");
     $queue_active_samples_sth -> execute() or do {
       print_bug("Failed to list active samples for queue: ".$dbh->errstr());
       return;
