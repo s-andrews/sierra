@@ -71,8 +71,8 @@
     </tr>
     <!-- TMPL_LOOP NAME=LANES -->
     <tr>
-      <td><!-- TMPL_VAR NAME=LANE ESCAPE=HTML --></td>
       <!-- TMPL_IF NAME=SAMPLE_ID -->
+      <td><!-- TMPL_VAR NAME=LANE ESCAPE=HTML --></td>
       <td><a href="sierra.pl?action=view_sample&amp;sample_id=<!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML -->">Sample <!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML --></a></td>
       <td><!-- TMPL_VAR NAME=SAMPLE_NAME ESCAPE=HTML --></td>
       <td><!-- TMPL_VAR NAME=BARCODES ESCAPE=HTML --></td>
@@ -85,7 +85,11 @@
       <td><a href="sierra.pl?action=remove_sample&amp;lane_id=<!-- TMPL_VAR NAME=LANE_ID ESCAPE=HTML -->">Remove</a></td>
       <!-- /TMPL_IF -->
       <!-- TMPL_ELSE -->
+      <!-- TMPL_IF NAME=RUN_ID -->
+      <!-- TMPL_ELSE -->
+      <td><!-- TMPL_VAR NAME=LANE ESCAPE=HTML --></td>
       <td colspan="7" class="center">Empty</td>
+      <!-- /TMPL_IF -->
       <!-- /TMPL_IF -->
     </tr>
     <!-- /TMPL_LOOP -->
