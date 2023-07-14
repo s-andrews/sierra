@@ -70,7 +70,8 @@
       <th>Received</th>
       <th>Passed Individual QC</th>
       <th>Passed Final QC</th>
-      <th>Lanes Requested</th>
+      <th>Lanes</th>
+      <th>QC Lane</th>
       <th>Lanes Run</th>
     </tr>
 
@@ -104,6 +105,7 @@
            Not Received
         <!-- /TMPL_IF --></td>
       <td><!-- TMPL_VAR NAME=LANES_REQUESTED ESCAPE=HTML --></td>
+      <td><!-- TMPL_IF NAME=QCLANE -->Yes<!-- TMPL_ELSE -->No<!-- /TMPL_IF --></td>
       <td><!-- TMPL_VAR NAME=LANES_RUN ESCAPE=HTML --></td>
     </tr>
     <!-- /TMPL_LOOP -->
@@ -124,7 +126,7 @@
   <table>
     <tr>
       <th>Run Type</th>
-      <th>Lanes Requested</th>
+      <th>Lanes</th>
       <th>Owner</th>
       <th>Submitted</th>
       <th>Received</th>
