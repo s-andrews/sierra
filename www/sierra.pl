@@ -4017,7 +4017,7 @@ sub new_flowcell {
 
     my @other_samples;
 
-    my $other_samples_sth = $dbh->prepare("SELECT sample.id,sample.users_sample_name,person.first_name,person.last_name,DATE_FORMAT(passed_qc_date,'%e %b %Y'),sample.lanes_required FROM sample,person WHERE sample.is_complete != 1 AND sample.passed_qc_date IS NOT NULL AND sample.run_type_id!=? AND sample.person_id=person.id");
+    my $other_samples_sth = $dbh->prepare("SELECT sample.id,sample.users_sample_name,person.first_name,person.last_name,DATE_FORMAT(passed_qc_date,'%e %b %Y'),sample.lanes_required, sample.run_qc_lane FROM sample,person WHERE sample.is_complete != 1 AND sample.passed_qc_date IS NOT NULL AND sample.run_type_id!=? AND sample.person_id=person.id");
 
 
     $other_samples_sth -> execute($run_type_id) or do {
@@ -4025,7 +4025,7 @@ sub new_flowcell {
       return;
     };
 
-    while (my ($sample_id,$name,$first,$last,$passed_qc,$requested) = $other_samples_sth->fetchrow_array()) {
+    while (my ($sample_id,$name,$first,$last,$passed_qc,$requested,$qc_lane) = $other_samples_sth->fetchrow_array()) {
 
       $count_used_lanes_sth -> execute($sample_id) or do {
 	print_bug("Couldn't count lanes used by sample '$sample_id': ".$dbh->errstr());
@@ -4043,6 +4043,7 @@ sub new_flowcell {
 				FREE_LANES => \@free_lanes,
 				LANES_RUN => $lanes_run,
 				FLOWCELL_ID => $flowcell_id,
+				QCLANE => $qc_lane
 			       };
     }
 

@@ -150,6 +150,7 @@
 
   <table>
     <tr>
+      <th>QC Lane</td>
       <th>Sample ID</th>
       <th>Sample Name</th>
       <th>Owner</th>
@@ -163,6 +164,7 @@
 
     <!-- TMPL_LOOP NAME=OTHER_SAMPLES -->
     <tr>
+      <td><!-- TMPL_IF NAME=QCLANE -->Yes<!-- /TMPL_IF --></td>
       <td><a href="sierra.pl?action=view_sample&amp;sample_id=<!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML-->">Sample <!-- TMPL_VAR NAME=SAMPLE_ID ESCAPE=HTML --></a></td>
       <td><!-- TMPL_VAR NAME=NAME ESCAPE=HTML --></td>
       <td><!-- TMPL_VAR NAME=OWNER ESCAPE=HTML --></td>
