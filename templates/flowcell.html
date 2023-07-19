@@ -194,11 +194,11 @@
 
 
   <!-- /TMPL_IF -->
+  <!-- /TMPL_IF -->
+
   <!-- TMPL_IF NAME=RUN_ID -->
 
-
   <!-- TMPL_ELSE -->
-
 
   <form action="sierra.pl" method="GET"><input type="hidden" name="action" value="create_run">
     <input type="hidden" name="flowcell_id" value="<!-- TMPL_VAR NAME=FLOWCELL_ID ESCAPE=HTML -->">
@@ -206,7 +206,6 @@
       <input type="submit" value="Create a Run from this Flowcell">
     </p>
   </form>
-  <!-- /TMPL_IF -->
   <!-- /TMPL_IF -->
 
 
