@@ -309,9 +309,22 @@ else {
 
 #########################################
 
+sub print_header {
+    my ($session) = @_;
+    my $cookie = $q -> cookie(-name=>($session->name), -value=>($session->id), -HttpOnly=> 1);
+    # We would like to use secure cookies, but this breaks on bioinfdev
+    # as it currently doesn't support https
+    # my $cookie = $q -> cookie(-name=>($session->name), -value=>($session->id), -HttpOnly=> 1, -secure=> 1);
+
+    print $q -> header(-cookie=>$cookie);
+}
+
+
+
+
 sub show_login_page {
   my $template = HTML::Template -> new (filename => 'login.html', associate=>$session);
-  print $session->header();
+  print_header($session);
   print $template -> output();
 }
 
@@ -381,8 +394,7 @@ sub process_login {
 
   unless ($id) {
     print_error("Couldn't find an account using email '$email'.  Maybe you need to create a new account?");
-    return;
-  }
+    return;  }
 
 
   # When the account is first created there may be no password entry
@@ -415,7 +427,7 @@ sub process_login {
 
 sub start_new_account {
   my $template = HTML::Template -> new (filename => 'new_account.html', associate=>$session);
-  print $session->header();
+  print_header($session);
   print $template -> output();
 }
 
@@ -517,7 +529,7 @@ sub finish_new_account {
     return;
   }
 
-  # We need to put an entry in the permission table to enable them to
+  # We need to put an entry in the permission table to enaxsxsxble them to
   # see their own samples
   $dbh->do("INSERT INTO person_permission (owner_person_id,permission_person_id) VALUES (?,?)",undef,($id,$id)) or do {
     print_bug("Couldn't create default permissions for new user:".$dbh->errstr());
@@ -690,7 +702,7 @@ sub create_run {
 
   $template->param(RUN_FOLDER => $run_folder_name);
 
-  print $session->header();
+  print_header($session);
   print $template->output();
 
 }
@@ -961,7 +973,7 @@ sub start_search {
   $template->param(YEARS=>\@years);
 
 
-  print $session->header();
+  print_header($session);
   print $template -> output();
 }
 
@@ -1201,7 +1213,7 @@ sub run_sample_search {
 
   $template -> param(SAMPLES => \@samples);
 
-  print $session->header();
+  print_header($session);
   print $template -> output();
 
 }
@@ -1333,7 +1345,7 @@ sub run_run_search {
 
   $template -> param(RUNS => \@runs);
 
-  print $session->header();
+  print_header($session);
   print $template -> output();
 
 }
@@ -1472,7 +1484,7 @@ sub run_people_search {
 
   $template -> param(PEOPLE => \@people);
 
-  print $session->header();
+  print_header($session);
   print $template -> output();
 
 }
@@ -1571,7 +1583,7 @@ sub start_change_details {
   $template -> param(OTHER_PERMISSIONS => \@other_permissions);
 
 
-  print $session->header();
+  print_header($session);
   print $template -> output();
 }
 
@@ -1676,7 +1688,7 @@ sub finish_change_details {
       $template -> param(MESSAGE => 'Your details have been updated.');
     }
 
-    print $session->header();
+    print_header($session);
     print $template->output();
 
 
@@ -1730,7 +1742,7 @@ sub finish_change_details {
 
     $template -> param(MESSAGE => 'Your password has been changed.');
 
-    print $session->header();
+    print_header($session);
     print $template->output();
 
 
@@ -1868,7 +1880,7 @@ sub send_password_reset {
   # If there's no data then show them the input form
   unless ($email || $password || $password2) {
     my $template = HTML::Template -> new (filename => 'password_reminder.html', associate=>$session);
-    print $session->header();
+    print_header($session);
     print $template -> output();
     return;
   }
@@ -1964,7 +1976,7 @@ sub send_password_reset {
     else {
       $template -> param(MESSAGE => 'Your password reset email has been sent.  Your new password will not work until you click on the link in the email.');
     }
-    print $session->header();
+    print_header($session);
     print $template->output();
 
   }
@@ -2024,7 +2036,7 @@ sub reset_password {
 
     $template -> param(MESSAGE => 'Your new password has been activated.  You should now be able to log in using the new password you chose.');
 
-    print $session->header();
+    print_header($session);
     print $template->output();
 
 }
@@ -2361,7 +2373,7 @@ sub view_lane {
 
   $template->param(FILE_TYPES => \@file_types);
 
-  print $session->header();
+  print_header($session);
   print $template->output();
 
 }
@@ -2519,7 +2531,7 @@ sub view_sample {
   $template -> param(RESULTS => \@results,
 		     RESULT_COUNT => scalar @results);
 
-  print $session->header();
+  print_header($session);
   print $template -> output();
 
 }
@@ -3173,7 +3185,7 @@ sub edit_sample {
 		    );
 
 
-  print $session->header();
+  print_header($session);
   print $template -> output();
 
 }
@@ -4147,7 +4159,7 @@ sub new_flowcell {
     }
   }
 
-  print $session->header();
+  print_header($session);
   print $template -> output();
 
 }
@@ -4238,7 +4250,7 @@ sub edit_flowcell {
     $template->param(YEARS=>\@years);
 
   
-    print $session->header();
+    print_header($session);
     print $template -> output();
 
 }
@@ -4523,7 +4535,7 @@ sub email_users {
 
   $template -> param(SENT_COUNT => $q->param("sent_count"));
 
-  print $session->header();
+  print_header($session);
   print $template -> output();
 
 }
@@ -4661,7 +4673,7 @@ sub configuration {
   $template->param(DATABASES => \@databases);
 
 
-  print $session->header();
+  print_header($session);
   print $template -> output();
 
 }
@@ -4958,7 +4970,7 @@ sub reports {
   }
 
 
-  print $session->header();
+  print_header($session);
   print $template -> output();
 
 }
@@ -5026,7 +5038,7 @@ sub edit_instrument {
 
   $template->param(RUN_TYPES => \@run_types);
 
-  print $session->header();
+  print_header($session);
   print $template -> output();
 
 }
@@ -5184,7 +5196,7 @@ sub edit_run_type {
 
   $template->param(INSTRUMENTS => \@instruments);
 
-  print $session->header();
+  print_header($session);
   print $template -> output();
 
 }
@@ -5306,7 +5318,7 @@ sub edit_adapter_type {
 		       );
 
   }
-  print $session->header();
+  print_header($session);
   print $template -> output();
 
 }
@@ -5396,7 +5408,7 @@ sub edit_sample_type {
 
   }
 
-  print $session->header();
+  print_header($session);
   print $template -> output();
 
 }
@@ -5493,7 +5505,7 @@ sub edit_database {
 
   }
 
-  print $session->header();
+  print_header($session);
   print $template -> output();
 
 }
@@ -5750,7 +5762,7 @@ sub show_home_page {
   }
 
 
-  print $session->header();
+  print_header($session);
   print $template -> output();
 
 }
@@ -5885,7 +5897,7 @@ sub show_queue {
 
   }
 
-  print $session->header();
+  print_header($session);
   print $template -> output();
 
 }
