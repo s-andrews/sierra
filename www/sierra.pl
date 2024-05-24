@@ -642,16 +642,6 @@ sub create_run {
 		   RUN_TYPE => $run_type,
 		  );
 
-  # Find if there is a control lane on this flowcell
-  my ($control_lane) = $dbh->selectrow_array("SELECT lane_number FROM lane WHERE flowcell_id=? AND use_as_control=1",undef,($flowcell_id));
-
-#  unless (defined $control_lane) {
-#    print_bug("Couldn't find a flowcell with id $flowcell_id:".$dbh->errstr());
-#    return;
-#  }
-
-  $template->param(CONTROL_LANE => $control_lane);
-
 
   # No make up a list of machines
   my $machines_sth = $dbh->prepare("SELECT instrument.id,instrument.serial_number,instrument.description FROM run_type_instrument,instrument WHERE run_type_instrument.run_type_id=? AND run_type_instrument.instrument_id=instrument.id AND instrument.retired != 1 AND instrument.available=1");
