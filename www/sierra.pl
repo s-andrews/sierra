@@ -2270,7 +2270,7 @@ sub view_lane {
 
 
   my @folders = $run_obj->get_results_folders();
-
+  
   foreach my $folder (@folders) {
 
     my @files = $folder -> get_files_for_lane($lane_obj,$file_type_filter, @barcode_sequences);
@@ -2465,9 +2465,12 @@ sub view_sample {
     my @paragraphs;
 
     # The filename has a timestamp on the front.  We'll hide this
-    # when we show it to use the user.
+    # when we show it to use the user.  This could be null if there is no attachment
     my $viewname = $filename;
-    $viewname =~ s/^\d+_//;
+
+    if ($viewname) {
+	$viewname =~ s/^\d+_//;
+    }
     
     # Admins are allowed to delete notes
     my $is_admin = 0;
