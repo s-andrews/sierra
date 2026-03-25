@@ -64,9 +64,9 @@ if ($version) {
 
 if (@working_folders) {
     foreach my $working_folder (@working_folders) {
-	unless (-e $working_folder) {
-	    die "Working folder '$working_folder' doesn't exist\n";
-	}
+    	unless (-e $working_folder) {
+	      die "Working folder '$working_folder' doesn't exist\n";
+	    }
     }
 }
 
@@ -216,13 +216,16 @@ sub check_run_status {
       foreach my $working_folder (@working_folders) {
 	  if ($working_folder) {
 	      if (-e "$working_folder/$folder/Unaligned") {
-		  return 0;
+		      return 0;
 	      }
 	      elsif (-e "$working_folder/$folder/RTAComplete.txt") {
-		  return ("Unprocessed","$working_folder/$folder");
+		      return ("Unprocessed","$working_folder/$folder");
+	      }
+        elsif (-e "$working_folder/$folder/RunUploaded.json") {
+		      return ("Unprocessed","$working_folder/$folder");
 	      }
 	      elsif (-e "$working_folder/$folder") {
-		  return ("Running","$working_folder/$folder");
+		      return ("Running","$working_folder/$folder");
 	      }
 	  }
       }
