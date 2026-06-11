@@ -843,9 +843,8 @@ sub start_search {
 
   my @users;
 
-  if ($session->param("is_admin")) {
-    push @users, {ID => 0,USERNAME=> "[Anyone]"};
-  }
+  # We now allow everyone to search through all accessible users
+  push @users, {ID => 0,USERNAME=> "[Anyone]"};
 
   # If we're an admin we get the full list of users.  Everyone else
   # simply gets the users they have persmission to view
@@ -991,8 +990,8 @@ sub run_sample_search {
       my ($permission_id) = $dbh->selectrow_array("SELECT id FROM person_permission WHERE permission_person_id=? AND owner_person_id=?",undef,($session->param("person_id"),$person_id));
 
       unless ($permission_id) {
-	print_bug("You do not have permission to look at samples for user $person_id");
-	return;
+    	  print_bug("You do not have permission to look at samples for user $person_id");
+	      return;
       }
     }
 
@@ -1000,11 +999,33 @@ sub run_sample_search {
     push @parameters,$person_id;
   }
   else {
-    # Non admins must provide a person id
-
     unless ($session->param("is_admin")) {
-      print_bug("No person id was selected");
-      return;
+      # For non-admins we still need to add a constraint
+      # they just get to see the list of users that they
+      # have permission to see.
+
+      my $allowed_users_sth = $dbh->prepare("SELECT owner_person_id FROM person_permission WHERE person_permission.permission_person_id=?");
+
+      $allowed_users_sth->execute($session->param("person_id")) or do {
+        print_bug("Couldn't get list of people: ".$dbh->errstr());
+        return;
+      };
+
+      my @allowed_users;
+
+      while (my ($id) = $allowed_users_sth->fetchrow_array()) {
+        push @allowed_users, $id;
+      }
+
+      # Now we need to add this constraint to the SQL Query
+      $sql_query .= " AND person.id IN (";
+
+      # We need a dynamic number of placeholders based on the number of users
+      # who they can see
+      my $placeholders = join ",", ("?") x @allowed_users;
+      $sql_query .= $placeholders;
+      push @parameters, @allowed_users;
+      $sql_query .= ")";
     }
   }
   
