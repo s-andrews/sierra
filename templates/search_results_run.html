@@ -11,6 +11,7 @@
       <th>Flowcell ID</th>
       <th>Run Folder</th>
       <th>Run Type</th>
+      <th>Instument</th>
       <th>Date</th>
     </tr>
 
@@ -22,6 +23,7 @@
       <td><a href="sierra.pl?action=view_flowcell&amp;flowcell_id=<!-- TMPL_VAR NAME=FLOWCELL_ID ESCAPE=HTML -->">Flowcell <!-- TMPL_VAR NAME=FLOWCELL_ID ESCAPE=HTML --></a></td>
       <td><!-- TMPL_VAR NAME=RUN_FOLDER ESCAPE=HTML --></td>
       <td><!-- TMPL_VAR NAME=RUN_TYPE ESCAPE=HTML --></td>
+      <td><!-- TMPL_VAR NAME=INSTRUMENT ESCAPE=HTML --></td>
       <td><!-- TMPL_VAR NAME=DATE ESCAPE=HTML --></td>
     </tr>
     <!-- /TMPL_LOOP -->

@@ -1235,7 +1235,7 @@ sub run_run_search {
   my $template = HTML::Template -> new (filename => 'search_results_run.html', associate=>$session);
 
 
-  my $sql_query = "SELECT run.id,run.run_folder_name,DATE_FORMAT(run.date,'%e %b %Y'),run.flowcell_id,run_type.name FROM run,run_type,flowcell WHERE run.flowcell_id=flowcell.id AND flowcell.run_type_id=run_type.id";
+  my $sql_query = "SELECT run.id,run.run_folder_name,DATE_FORMAT(run.date,'%e %b %Y'),run.flowcell_id,run_type.name,instrument.description FROM run,run_type,flowcell,instrument WHERE run.flowcell_id=flowcell.id AND flowcell.run_type_id=run_type.id AND run.instrument_id=instrument.id ";
 
   my @parameters;
 
@@ -1342,7 +1342,7 @@ sub run_run_search {
 
 
   my @runs;
-  while (my ($run_id,$run_folder,$date,$flowcell_id,$run_type)= $runs_sth->fetchrow_array()) {
+  while (my ($run_id,$run_folder,$date,$flowcell_id,$run_type,$instrument)= $runs_sth->fetchrow_array()) {
 
     push @runs, {
 		 RUN_ID => $run_id,
@@ -1350,6 +1350,7 @@ sub run_run_search {
 		 RUN_TYPE => $run_type,
 		 DATE => $date,
 		 RUN_FOLDER => $run_folder,
+     INSTRUMENT => $instrument,
 		};
 
   }
